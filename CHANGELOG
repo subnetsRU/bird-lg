@@ -1,4 +1,23 @@
 ===========
+02.12.2014
+===========
+    Version 0.4.2 is released.
+
+    What`s new:
+	* fix bug: when "show protocols" cmd has no output to web-interface when $config['output']['modify']['protocols'] is set to "false"
+	* update bird.client.php: for run on remote host on Linux OS via TCP-based server (read README file)
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * bird.client.php
+	    * CHANGELOG
+	    * README
+
+===========
 08.11.2014
 ===========
     Version 0.4.1 is released.

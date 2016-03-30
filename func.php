@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.4.1
+    BIRD Looking Glass :: Version: 0.4.2
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -10,7 +10,7 @@
 */
 
 ////////////////////// Functions file ////////////////////////////
-define('LG_VERSION',"0.4.1");
+define('LG_VERSION',"0.4.2");
 session_start();
 date_default_timezone_set($config['timezone']);
 error_reporting(E_ALL);
@@ -846,7 +846,7 @@ function parse_bird_data($data,$query,$config,$p){
 	}
 	$tmp=explode("\n",$data);
 	foreach ($tmp as $str){
-		if (config_val($config['output'],"modify","protocols")){
+		if (config_val($config['output'],"modify","protocols") || config_val($config['output'],"hide","protocol")){
 		    if (preg_match(sprintf("/\s+%s\s+/i",$protos),$str)){
 			if (preg_match("/^\S+\s+\S+\s+\S+\s+(down)/",$str)){
 			    if (config_val($config['output'],"hide","protocol")){
@@ -863,6 +863,8 @@ function parse_bird_data($data,$query,$config,$p){
 		    }else{
 			$ret.=sprintf("%s\n",trim($str));
 		    }
+		}else{
+		    $ret.=sprintf("%s\n",trim($str));
 		}
 	}
     }elseif ($query=="bfd_sessions"){

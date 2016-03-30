@@ -182,17 +182,22 @@ Installing on remote host to be run separately from web-interface
     * X.X.X.X is IP-address of host where web-interface located
     * Y.Y.Y.Y is IP-address to listen connections from web-interface
     * ZZZZZ tcp port to listen connections from web-interface
+
     1. Download archive with last version of LG from http://bird-lg.subnets.ru/
+
     2. Unpack files:
 	- bird.lg.config.php
 	- bird.client.php
     from archive to some folder (such as /usr/local/sbin)
+
     3. Edit LG config file bird.lg.config.php for your needs.
 	You must: 
 	    - set "bird_client_remote" to true
 	    - add string: 
 		$config['bird_client_remote_permited_ips'][]="X.X.X.X";
+
     4. Start tcp-based server
+
 	Example for FreeBSD users:
 	    # cd /usr/ports/sysutils/ucspi-tcp
 	    # make install clean
@@ -202,12 +207,27 @@ Installing on remote host to be run separately from web-interface
 		
 	    # /usr/local/bin/tcprules /usr/local/bin/tcpserver.cdb /usr/local/bin/tcpserver.tmp < /usr/local/bin/tcpserver.conf
 	    # /usr/local/bin/tcpserver -v -H -R -l 0 -c 10 -x /usr/local/bin/tcpserver.cdb Y.Y.Y.Y ZZZZZ /usr/local/bin/php /usr/local/sbin/bird.client.php &
+
+	Example for Linux users:
+	* This example is provided by forum user: dragomir (see http://subnets.ru/forum/viewtopic.php?f=18&t=519 for details)
+	    a) install inetutils-inetd
+	    b) edit /etc/default/inetutils-inetd and add:
+		INETD_OPTS="--environment"
+	    c) edit /etc/inetd.conf and add:
+		birdclient  stream  tcp     nowait  root /usr/sbin/tcpd /usr/bin/php /usr/local/sbin/bird.client.php
+	    d) edit /etc/services and add:
+		birdclient      ZZZZZ/tcp
+	    e) check /etc/hosts.allow for allowing connections:
+		ALL:ALL
+	    f) start inetutils-inetd
+
     5. Edit LG config file on X.X.X.X (web-interface host) and add Y.Y.Y.Y ZZZZZ as remote node:
 	$hin++;
 	$config['nodes'][$hin]['host'] = 'Y.Y.Y.Y';
 	$config['nodes'][$hin]['port'] = 'ZZZZZ';
 	$config['nodes'][$hin]['name'] = 'Remote';
 	$config['nodes'][$hin]['description'] = 'remote host';
+
     6. Start browser and open URL such as http://yourserver/lg/index.php
 
 Notes
@@ -227,9 +247,14 @@ Notes
 ================================================================================================================================
     TESTED ON
 ================================================================================================================================
-    * OS: FreeBSD versions: 8.3, 8.4, 9.1
-    * BIRD versions: 1.3.11, 1.4.0, 1.4.4
-    * PHP: version 5.4.21
+    * OS: 
+	- FreeBSD versions: 8.3, 8.4, 9.1
+	- Linux: Ubuntu 12.10, Debian 6
+    * BIRD versions: 1.3.7, 1.3.11, 1.4.0, 1.4.4
+    * PHP: 
+	- 5.4.21
+	- 5.3.3
+	- 5.3.10
     * HTTP: Apache 2.2
 
 ================================================================================================================================
@@ -237,7 +262,7 @@ Notes
 ================================================================================================================================
 You can request for support or report bug:
     * email: lg@subnets.ru virus@subnet.ru
-    * www: http://subnets.ru/wrapper.php?p=100 or http://subnets.ru/forum/
+    * www: http://subnets.ru/wrapper.php?p=100 or http://subnets.ru/forum/viewtopic.php?f=18&t=519
 
 In support request it necessarily should be attached:
     * your OS version: uname -a
