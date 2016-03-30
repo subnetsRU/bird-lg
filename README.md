@@ -1,13 +1,13 @@
-Looking Glass (LG) for the Internet Routing Daemon "BIRD" 
+### Looking Glass (LG) for the Internet Routing Daemon "BIRD" 
 -----------------------------------
 
-### About
-This is a looking glass for the Internet Routing Daemon "Bird" --> http://bird.network.cz/
+#### About
+This is a LG for the Internet Routing Daemon [Bird] (http://bird.network.cz/)
 
-LG written on PHP: http://php.net/
+LG written on [PHP] (http://php.net/)
 
-LG is split in two parts:
+There are two parts in LG:
 * Web interface
-* Client for communicate with BIRD socket
+* Client for communicate with BIRD via socket
 
 **Please see file ABOUT for details.**
