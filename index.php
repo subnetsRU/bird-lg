@@ -1,12 +1,15 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.2
+
+    BIRD Looking Glass :: Version: 0.3.3
     Home page: http://bird-lg.subnets.ru/
     =====================================
-    Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
+    Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
     Authors: Nikolaev Dmitry <virus@subnets.ru>, Panfilov Alexey <lehis@subnets.ru>
 
 */
+
+//////////////////////// Index file /////////////////////////////
 
 $func="func.php";
 if (!@include $func){
@@ -15,8 +18,11 @@ if (!@include $func){
 }
 
 $param=$_POST;
+if (!isset($param['query'])){
+    $param['query']="";
+}
 
-if (!isset($param['query'])&&!$param['query']){
+if (!$param['query']){
     head();
     print "<script>";
     print "function request(act){\n";
@@ -63,7 +69,7 @@ if (!isset($param['query'])&&!$param['query']){
 	    $('errors').innerHTML='Errors:<ul>'+err+'</ul>';
 	}";
     print "}\n";
-    print "function det(reqv){
+    print "function subrequest(reqv){
 	div=$('content');
 	if (reqv){
 	    div.innerHTML='<center><BR><img src=\"img/indicator.gif\"><BR><b>Processing...</b></center>';
@@ -73,6 +79,7 @@ if (!isset($param['query'])&&!$param['query']){
 	    $('errors').innerHTML='Errors:<ul>Query was empty</ul>';
 	}
     }\n";
+
     if (isset($config['check_new_version'])){
 	if ($config['check_new_version']){
 	    print "function check_new_version(){
@@ -85,7 +92,7 @@ if (!isset($param['query'])&&!$param['query']){
     print "</script>";
 
     print "<div class=\"header\">";
-    print "<span id=\"new_version_info\"></span>&copy; <a href=\"http://subnets.ru\" target=\"_blank\">SUBNETS.RU</a>, 2013";
+    print "<span id=\"new_version_info\"></span>&copy; <a href=\"http://subnets.ru\" target=\"_blank\">SUBNETS.RU</a>, 2013-2014";
     print "</div>";
 
     printf("<TABLE BORDER=\"0\" WIDTH=\"100%%\">
@@ -123,18 +130,64 @@ if (!isset($param['query'])&&!$param['query']){
 	if (isset($config['check_new_version'])){
 	    if ($config['check_new_version']){
 		$new_ver=check_lg_version($config['check_new_version']);
-		if (!$new_ver['error']&&$new_ver['version']){
-		    printf("<span class=\"new_ver\">This LG version %s, latest LG <a href=\"%s\" target=\"blank\">version %s</a></span><BR>",LG_VERSION,$new_ver['url'],$new_ver['version']);
+		if (!$new_ver['error'] && $new_ver['version']){
+		    if (LG_VERSION != $new_ver['version'] ){
+			printf("<span class=\"new_ver\">This LG version %s, latest LG <a href=\"%s\" target=\"blank\">version %s</a></span><BR>",LG_VERSION,$new_ver['url'],$new_ver['version']);
+		    }
 		}
 	    }
 	}
     }else{
+	//deb($query);
+	//deb($param);
+
+	$js_param=array();
+	$js_param['repeat']="";
+	$js_param['back']="";
+	if ( is_array($param) && count($param) > 0 ){
+	    $back="";
+	    if ( isset($param['back']) && $param['back'] ){
+		$back=$param['back'];
+		unset($param['back']);
+	    }
+
+	    foreach ($param as $k => $v){
+		$js_param['repeat'] .= sprintf("&%s=%s%s",$k,$v,$back?"&back=".$back:"");
+		if ($back){
+		    if ($k == "query"){
+			if ( $back ){
+			    $v=$back;
+			}else{
+			    if ( preg_match("/^nei_route_/",$v) ){
+				$v="bgp_summ";
+			    }elseif ( preg_match("/^bgp_det/",$v) ){
+				$v="bgp_summ";
+			    }
+			}
+		    }
+		    $js_param['back'] .= sprintf("&%s=%s",$k,$v);
+		}
+	    }
+	}
+
+	$buttons=array();
+	$buttons['new_request']="<button class=\"but\" onclick=\"request('0');\">New request</button>";
+	if ($js_param['repeat']){
+	    $buttons['repeat']=sprintf("<button class=\"but\" onclick=\"subrequest('%s');\">Repeat request</button>",$js_param['repeat']);
+	}
+	if ($js_param['back']){
+	    $buttons['back']=sprintf("<button class=\"but\" onclick=\"subrequest('%s');\">Return back</button>",$js_param['back']);
+	}
+
 	print "<script>$('errors').empty();</script>";
-	$back_but="<button class=\"but\" onclick=\"request('0');\">New request</button><BR><BR>";
+
+	if ($query && $query !="main_form"){
+	    show_buttons($buttons);
+	}
+
 	if ($query=="main_form"){
 	    printf("%s",main_form($config));
 	}elseif ($query=="bgp_det"){
-	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_peer_det_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
@@ -161,7 +214,7 @@ if (!isset($param['query'])&&!$param['query']){
 				if ($result['error']){
 				    printf("%s",$result['error']);
 				}else{
-				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"protocols",$config));
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"protocols",$config,$param));
 				}
 			    }else{
 				printf("%s",error("Peer not found"));
@@ -172,8 +225,9 @@ if (!isset($param['query'])&&!$param['query']){
 		    }
 		}
 	    }
+
+	    show_buttons($buttons,1);
 	}elseif ($query=="nei_route_accepted"){
-	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_accepted_routes_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
@@ -199,7 +253,7 @@ if (!isset($param['query'])&&!$param['query']){
 				if ($result['error']){
 				    printf("%s",$result['error']);
 				}else{
-				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config,$param));
 				}
 			    }else{
 				printf("%s",error("Peer not found"));
@@ -210,8 +264,9 @@ if (!isset($param['query'])&&!$param['query']){
 		    }
 		}
 	    }
+
+	    show_buttons($buttons,1);
 	}elseif ($query=="nei_route_best"){
-	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_best_routes_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
@@ -237,7 +292,7 @@ if (!isset($param['query'])&&!$param['query']){
 				if ($result['error']){
 				    printf("%s",$result['error']);
 				}else{
-				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config,$param));
 				}
 			    }else{
 				printf("%s",error("Peer not found"));
@@ -248,8 +303,9 @@ if (!isset($param['query'])&&!$param['query']){
 		    }
 		}
 	    }
+
+	    show_buttons($buttons,1);
 	}elseif ($query=="nei_route_filtered"){
-	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_filtered_routes_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
@@ -275,7 +331,7 @@ if (!isset($param['query'])&&!$param['query']){
 				if ($result['error']){
 				    printf("%s",$result['error']);
 				}else{
-				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config,$param));
 				}
 			    }else{
 				printf("%s",error("Peer not found"));
@@ -286,8 +342,9 @@ if (!isset($param['query'])&&!$param['query']){
 		    }
 		}
 	    }
+
+	    show_buttons($buttons,1);
 	}elseif ($query=="nei_route_export"){
-	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_export_routes_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
@@ -313,7 +370,7 @@ if (!isset($param['query'])&&!$param['query']){
 				if ($result['error']){
 				    printf("%s",$result['error']);
 				}else{
-				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config,$param));
 				}
 			    }else{
 				printf("%s",error("Peer not found"));
@@ -324,8 +381,10 @@ if (!isset($param['query'])&&!$param['query']){
 		    }
 		}
 	    }
+	    
+	    show_buttons($buttons,1);
 	}else{
-	    print $back_but;
+	    //print "<BR><BR>";
 	    if (is_array($config['query'])){
 		if (isset($config['query'][$query])){
 		    if (!isset($param['protocol'])){
@@ -348,12 +407,15 @@ if (!isset($param['query'])&&!$param['query']){
 			    if ($result['error']){
 				printf("%s",$result['error']);
 			    }else{
-				printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],$query,$config));
+				printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],$query,$config,$param));
 			    }
 			}
 		    }
+		    show_buttons($buttons,1);
 		}else{
 		    printf("%s",error("Unknown query type"));
+		    //deb($query);
+		    //deb($config['query']);
 		}
 	    }else{
 		printf("%s",error("Config error: no query types"));

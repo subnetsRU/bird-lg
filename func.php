@@ -1,18 +1,25 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.2
+
+    BIRD Looking Glass :: Version: 0.3.3
     Home page: http://bird-lg.subnets.ru/
     =====================================
-    Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
+    Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
     Authors: Nikolaev Dmitry <virus@subnets.ru>, Panfilov Alexey <lehis@subnets.ru>
 
-    Functions file
 */
 
-$config="bird.lg.config.php";
-if (is_file($config)){
-    if (is_readable($config)){
-	if (!@include $config){
+////////////////////// Functions file ////////////////////////////
+define('LG_VERSION',"0.3.3");
+session_start();
+date_default_timezone_set($config['timezone']);
+error_reporting(E_ALL);
+//set_error_handler("exception_error_handler");
+
+$config_file="bird.lg.config.php";
+if (is_file($config_file)){
+    if (is_readable($config_file)){
+	if (!@include $config_file){
 	    print "[ERROR]: CONFIG not found\n";
 	    exit(0);
 	}
@@ -24,12 +31,9 @@ if (is_file($config)){
     print "[ERROR]: CONFIG file don`t exists\n";
     exit(0);
 }
-
 required_for_run();
 
-session_start();
-date_default_timezone_set($config['timezone']);
-define('LG_VERSION',"0.3.2");
+$config['protocols']=array("Direct","Kernel","Device","Static","Pipe","BGP","OSPF","RIP","RAdv","bfd");
 
 function head($title="LG"){
         printf ("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
@@ -203,7 +207,7 @@ function check_form_params($p=array(),$config=array()){
     $_SESSION['param']=$p;
     if (is_array($p)){
 	if (!array_key_exists($p['query'],$config['query'])){
-	    $ret['error']=error("Unknown query type");
+	    $ret['error']=error("Query type unknown");
 	    return $ret;
 	}
 	if (!isset($config['nodes'][$p['router']])){
@@ -357,7 +361,7 @@ function process_query($p=array(),$config=array()){
 	}elseif ($p['query']=="nei_route_accepted"){
 	    $p['additional']="";
 	    $p['cmd']=sprintf("show route protocol %s all",$p['peer']);
-	    $p['fake_cmd']=sprintf("show %s routes",$p['nei']);
+	    $p['fake_cmd']=sprintf("show %s routes",isset($p['nei'])?$p['nei']:"");
 	}elseif ($p['query']=="nei_route_best"){
 	    $p['additional']="";
 	    $p['cmd']=sprintf("show route protocol %s primary all",$p['peer']);
@@ -452,7 +456,7 @@ function bgp_summ($p=array(),$config=array()){
 		    $data.=sprintf("<tr%s>\n",$state_up?"":" style=\"color:red;\"");
 		    $data.=sprintf("<td>%d</td>",$k+1);
 		    if (!$hide_protocol){
-			$data.=sprintf("<td>%s</td>",$peer['name']);
+			$data.=sprintf("<td><b>%s</b></td>",$peer['name']);
 		    }
 		    if ($neighbor['error']){
 			$data.=sprintf("<td colspan=6><font color=\"darkred\"><i>can`t get neighbor%s info</i></font></td>\n",$hide_protocol?"":sprintf(" <b>%s</b>",$peer['name']));
@@ -460,12 +464,15 @@ function bgp_summ($p=array(),$config=array()){
 			if (config_val($config['output'],"hide","bgp_peer_det_link")){
 			    $data.=sprintf("<td>%s</td>",$nei['addr']);
 			}else{
-			    $data.=sprintf("<td><a style=\"cursor: pointer;\" onclick=\"det('query=bgp_det&router=%s&protocol=%s&peer=%s');\"><u>%s</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr']);
+			    $data.=sprintf("<td><a style=\"cursor: pointer;\" onclick=\"subrequest('query=bgp_det&router=%s&protocol=%s&peer=%s&back=bgp_summ');\"><u>%s</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr']);
 			}
 			if (isset($config['asn_url'])&&$config['asn_url']){
 			    $data.=sprintf("<td align=\"center\"><a href=\"%s\" target=\"_blank\">%s</td>",preg_replace("/%ASNUMBER%/",$nei['asn'],$config['asn_url']),$nei['asn']);
 			}else{
 			    $data.=sprintf("<td align=\"center\">%s</td>",$nei['asn']);
+			}
+			if (preg_match("/^(\d{4})\-(\d{2})\-(\d{2})$/",$peer['date'],$m)){
+			    $peer['date']=sprintf("%02d.%02d.%04d",$m[3],$m[2],$m[1]);
 			}
 			$data.=sprintf("<td align=\"center\">%s</td>",$peer['date']);
 			$data.=sprintf("<td align=\"center\">%s</td>",$nei['state']);
@@ -474,25 +481,25 @@ function bgp_summ($p=array(),$config=array()){
 			    if (config_val($config['output'],"hide","bgp_accepted_routes_link")){
 				$data.=sprintf("%s",$nei['accepted']);
 			    }else{
-				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['accepted']);
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_summ');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['accepted']);
 			    }
 			    $data.="&nbsp;/&nbsp;";
 			    if (config_val($config['output'],"hide","bgp_best_routes_link")){
 				$data.=sprintf("%s",$nei['best']);
 			    }else{
-				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['best']);
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_summ');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['best']);
 			    }
 			    $data.="&nbsp;/&nbsp;";
 			    if (config_val($config['output'],"hide","bgp_filtered_routes_link")){
 				$data.=sprintf("%s",$nei['filtered']);
 			    }else{
-				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_filtered&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['filtered']);
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_filtered&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_summ');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['filtered']);
 			    }
 			    $data.="</td>";
 			    if (config_val($config['output'],"hide","bgp_export_routes_link")){
 				$data.=sprintf("<td align=\"center\">%s</td>",$nei['exported']);
 			    }else{
-				$data.=sprintf("<td align=\"center\"><a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['exported']);
+				$data.=sprintf("<td align=\"center\"><a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_summ');\"><u>%d</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['exported']);
 			    }
 			}else{
 			    $data.="<td>&nbsp;</td>";
@@ -544,43 +551,34 @@ function bgp_neighbor_details($p=array(),$config=array()){
 			    $ret['data']['asn']=trim($m[1]);
 			}elseif (preg_match("/^BGP\sstate:\s+(\S+)$/",$v,$m)){
 			    $ret['data']['state']=trim($m[1]);
-/*
-			}elseif (preg_match("/^Routes:\s+(\d+)\s+imported,\s+(\d+)\s+exported,\s+(\d+)\s+preferred$/",$v,$m)){
-			    $ret['data']['accepted']=trim($m[1]);
-			    $ret['data']['best']=trim($m[3]);
-			    $ret['data']['exported']=trim($m[2]);
-*/
 			}elseif (preg_match("/^Routes:\s+(\d+)/",$v)){
-			    if (preg_match("/(\d+)\s+imported/",$v,$m)){
-				$ret['data']['accepted']=trim($m[1]);
-			    }
-			    if (preg_match("/(\d+)\s+exported/",$v,$m)){
-				$ret['data']['exported']=trim($m[1]);
-			    }
-			    if (preg_match("/(\d+)\s+preferred/",$v,$m)){
-				$ret['data']['best']=trim($m[1]);
-			    }
-			    if (preg_match("/(\d+)\s+filtered/",$v,$m)){
-				$ret['data']['filtered']=trim($m[1]);
+			    $routes=routes_count($v);
+			    //deb($routes);
+			    foreach ($routes as $key => $val){
+				$ret['data'][$key]=$val;
 			    }
 			}
 		    }
 		}
 	}
 
-	if ($p['full_info']){
-	    if (preg_match("/Routes:\s+\d+\s+imported,\s+\d+\s+exported,\s+\d+\s+preferred/",$show['data'])){
+	if (isset($p['full_info']) && $p['full_info']){
+	    if (preg_match("/Routes:\s+\d+/",$show['data'])){
 		if (!config_val($config['output'],"hide","bgp_accepted_routes_link")){
-		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['accepted']);
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_det');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['accepted']);
 		    $show['data']=preg_replace("/\d+\simported/",sprintf("%s imported",$lnk),$show['data']);
 		}
 		if (!config_val($config['output'],"hide","bgp_best_routes_link")){
-		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['best']);
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_det');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['best']);
 		    $show['data']=preg_replace("/\d+\spreferred/",sprintf("%s preferred",$lnk),$show['data']);
 		}
 		if (!config_val($config['output'],"hide","bgp_export_routes_link")){
-		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['exported']);
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_det');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['exported']);
 		    $show['data']=preg_replace("/\d+\sexported/",sprintf("%s exported",$lnk),$show['data']);
+		}
+		if (!config_val($config['output'],"hide","bgp_filtered_routes_link")){
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"subrequest('query=nei_route_filtered&router=%s&protocol=%s&peer=%s&nei=%s&back=bgp_det');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['filtered']);
+		    $show['data']=preg_replace("/\d+\sfiltered/",sprintf("%s filtered",$lnk),$show['data']);
 		}
 	    }
 	    return $show;
@@ -715,7 +713,7 @@ function connect_2_bird($p,$config){
  return $ret;
 }
 
-function parse_bird_data($data,$query,$config){
+function parse_bird_data($data,$query,$config,$p){
     $ret=$data;
     if ($query=="route" || $query=="export"){
 	$ret="";
@@ -799,7 +797,7 @@ function parse_bird_data($data,$query,$config){
 	}
     }elseif ($query=="protocols"){
 	$ret="";
-	$proto=array("Direct","Kernel","Device","Static","Pipe","BGP","OSPF","RIP","RAdv","bfd");
+	$proto=$config['protocols'];
 	if (is_array($proto)){
 		if (count($proto)==1){
 		    $protos=$proto[0];
@@ -848,7 +846,7 @@ function bgp_peer_search($p=array(),$config=array()){
 	}else{
 		$tmp=explode("\n",$result['data']);
 		foreach ($tmp as $k => $v){
-			if (preg_match("/^([a-zA-Z0-9\_]+)\s+BGP\s+/",$v,$m)){
+			if (preg_match(sprintf("/^([a-zA-Z0-9\_]+)\s+(%s)\s+/",implode("|",$config['protocols'])),$v,$m)){
 			    if (md5($m[1])==$p['peer']){
 				$peer=$m[1];
 			    }
@@ -925,28 +923,37 @@ function restricted($ips,$restricted){
 }
 
 function check_lg_version($check_version="0"){
+    $lg_host="bird-lg.subnets.ru";
+    $lg_port="80";
+    $get=sprintf("/check_version.php?version=%s",LG_VERSION);
+    if (!defined('LG_VERSION')){
+	define('LG_VERSION','N/A');
+    }
+
     $ret=array();
     $ret['error']="";
-    if ($check_version&&defined('LG_VERSION')){
-	$ret['version']="";
-	$lg_host="bird-lg.subnets.ru";
-	$lg_port="80";
-	$ret['url']=sprintf("http://%s/",$lg_host);
-	$get=sprintf("/check_version.php?version=%s",LG_VERSION);
-	$sock = @stream_socket_client(sprintf("tcp://%s:%d",$lg_host,$lg_port), $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
-	if ($sock&&$errno==0){
-	    $data='';
-	    @fwrite($sock, sprintf("GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: LG CHECKER v0.1\r\nAccept: */*\r\n\r\n",$get,$lg_host));
-	    while (!@feof($sock)) {
-		$data.=@fgets($sock, 1024);
+    $ret['url']=sprintf("http://%s/",$lg_host);
+    $ret['version']=LG_VERSION;
+
+    if ($check_version){
+	if (isset($_SESSION['check_version']) ){
+	    $ret['version']=$_SESSION['check_version'];
+	}else{
+	    $sock = @stream_socket_client(sprintf("tcp://%s:%d",$lg_host,$lg_port), $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
+	    if ($sock&&$errno==0){
+		$data='';
+		@fwrite($sock, sprintf("GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: LG CHECKER v0.1\r\nAccept: */*\r\n\r\n",$get,$lg_host));
+		while (!@feof($sock)) {
+		    $data.=@fgets($sock, 1024);
+		}
+		@fclose($sock);
 	    }
-	    @fclose($sock);
-	}
-	if ($data){
-	    $tmp=explode("\r\n\r\n",$data);
-	    if ($tmp[1]){
-		if (preg_match("/^(\d{1,3})(\.\d{1,2}){0,2}$/", $tmp[1])){
-		    $ret['version']=$tmp[1];
+	    if ($data){
+		$tmp=explode("\r\n\r\n",$data);
+		if ($tmp[1]){
+		    if (preg_match("/^(\d{1,3})(\.\d{1,2}){0,2}$/", $tmp[1])){
+			$ret['version']=$_SESSION['check_version']=$tmp[1];
+		    }
 		}
 	    }
 	}
@@ -955,6 +962,7 @@ function check_lg_version($check_version="0"){
 }
 
 function deb($text){
+    if (is_restricted()){
 	$notcli=1;
 	if (PHP_SAPI === 'cli'){
 	    $notcli=0;
@@ -974,6 +982,29 @@ function deb($text){
 	    printf ("%s",$text);
 	}
 	if ($notcli){print "</pre>";}
+    }
+}
+
+function is_restricted(){
+    global $config;
+    $ret=0;
+    if (PHP_SAPI === 'cli'){
+	$ret=1;
+    }else{
+	if (isset($config['restricted'])){
+	    if (is_array($config['restricted'])){
+		foreach ($config['restricted'] as $ip){
+		    if (isset($_SERVER['REMOTE_ADDR'])){
+			if ($_SERVER['REMOTE_ADDR'] == $ip){
+			    $ret=1;
+			    break;
+			}
+		    }
+		}
+	    }
+	}
+    }
+ return $ret;
 }
 
 function required_for_run(){
@@ -988,6 +1019,45 @@ function required_for_run(){
     if (!REMOTE_ADDR){
 	print "[ERROR]: REMOTE_ADDR addrees is unknown, check config";
 	exit(0);
+    }
+}
+
+function show_buttons($buttons,$pos="0"){
+    if (is_array($buttons)){
+	if ($pos){
+	    print "<BR><BR>";
+	}
+	foreach ($buttons as $but){
+	    print $but."&nbsp;";
+	}
+	if (!$pos){
+	    print "<BR><BR>";
+	}
+    }
+}
+
+function routes_count($str){
+    $ret=array();
+    if (preg_match("/(\d+)\s+imported/",$str,$m)){
+	$ret['accepted']=trim($m[1]);
+    }
+    if (preg_match("/(\d+)\s+exported/",$str,$m)){
+	$ret['exported']=trim($m[1]);
+    }
+    if (preg_match("/(\d+)\s+preferred/",$str,$m)){
+	$ret['best']=trim($m[1]);
+    }
+    if (preg_match("/(\d+)\s+filtered/",$str,$m)){
+	$ret['filtered']=trim($m[1]);
+    }
+ return $ret;
+}
+
+function exception_error_handler($errno, $errstr, $errfile, $errline ) {
+    if (is_restricted()){
+	print "<pre>";
+        throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+	print "</pre>";
     }
 }
 

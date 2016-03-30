@@ -1,10 +1,10 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.3.2
+    BIRD Looking Glass :: Version: 0.3.3
     Home page: http://bird-lg.subnets.ru/
     =====================================
-    Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
+    Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
     Authors: Nikolaev Dmitry <virus@subnets.ru>, Panfilov Alexey <lehis@subnets.ru>
 
 */
