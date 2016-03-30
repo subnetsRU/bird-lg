@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.1
+    BIRD Looking Glass :: Version: 0.3.2
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -213,6 +213,44 @@ if (!isset($param['query'])&&!$param['query']){
 	}elseif ($query=="nei_route_best"){
 	    print $back_but;
 	    if (config_val($config['output'],"hide","bgp_best_routes_link")){
+		printf("%s",error("Command execution is not permitted"));
+	    }else{
+		$restricted=0;
+		if (isset($config['query']['bgp_summ']['restricted'])){
+		    if (restricted($config['restricted'],$config['query']['bgp_summ']['restricted'])){
+			$restricted=1;
+		    }
+		}
+		if ($restricted){
+		    printf("%s",error("Command execution is not permitted"));
+		}else{
+		    if ($param['peer']&&$param['router']){
+			$result=bgp_peer_search($param,$config);
+			if ($result['error']){
+			    printf("%s",$result['error']);
+			}else{
+			    if ($result['data']){
+				$param['peer']=$result['data'];
+				unset($result);
+				$result=process_query($param,$config);
+				//deb($result);
+				if ($result['error']){
+				    printf("%s",$result['error']);
+				}else{
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				}
+			    }else{
+				printf("%s",error("Peer not found"));
+			    }
+			}
+		    }else{
+			printf("%s",error("Params is missing"));
+		    }
+		}
+	    }
+	}elseif ($query=="nei_route_filtered"){
+	    print $back_but;
+	    if (config_val($config['output'],"hide","bgp_filtered_routes_link")){
 		printf("%s",error("Command execution is not permitted"));
 	    }else{
 		$restricted=0;

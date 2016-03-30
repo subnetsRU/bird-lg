@@ -1,4 +1,27 @@
 ===========
+04.09.2014
+===========
+    Version 0.3.2 is released.
+    What`s new:
+	* add new abilities to web interface
+	    ** show bgp neighbor filtered routes link in bgp summary
+	* fixed bug of showing "Accepted / Best" routes for "BGP summary" command for some BIRD versions
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * CHANGELOG
+	    * README
+	4. edit your bird.lg.config.php:
+	    4.1. Edit $config['asn_url'], set:
+		$config['asn_url']="https://apps.db.ripe.net/search/lookup.html?source=ripe&key=AS%ASNUMBER%&type=aut-num";
+	    4.2 Add to "Bird output" section:
+		$config['output']['hide']['bgp_filtered_routes_link']=false;
+	
+===========
 22.12.2013
 ===========
     Version 0.3.1 is released.

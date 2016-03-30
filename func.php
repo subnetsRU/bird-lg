@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.1
+    BIRD Looking Glass :: Version: 0.3.2
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -29,7 +29,7 @@ required_for_run();
 
 session_start();
 date_default_timezone_set($config['timezone']);
-define('LG_VERSION',"0.3.1");
+define('LG_VERSION',"0.3.2");
 
 function head($title="LG"){
         printf ("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
@@ -362,6 +362,10 @@ function process_query($p=array(),$config=array()){
 	    $p['additional']="";
 	    $p['cmd']=sprintf("show route protocol %s primary all",$p['peer']);
 	    $p['fake_cmd']=sprintf("show %s routes best",$p['nei']);
+	}elseif ($p['query']=="nei_route_filtered"){
+	    $p['additional']="";
+	    $p['cmd']=sprintf("show route protocol %s filtered all",$p['peer']);
+	    $p['fake_cmd']=sprintf("show %s routes filtered",$p['nei']);
 	}elseif ($p['query']=="nei_route_export"){
 	    $p['additional']="";
 	    $p['cmd']=sprintf("show route export %s all",$p['peer']);
@@ -426,7 +430,7 @@ function bgp_summ($p=array(),$config=array()){
 		$data.="<th class=\"head\">ASN</th>";
 		$data.="<th class=\"head\">Date</th>";
 		$data.="<th class=\"head\">State</th>";
-		$data.="<th class=\"head\">Accepted / Best</th>";
+		$data.="<th class=\"head\">Accepted / Best / Filtered</th>";
 		$data.="<th class=\"head\">Exported</th>";
 		//$data.="<th class=\"head\">ErrCode</th>\n";
 		$data.="</tr>\n";
@@ -477,6 +481,12 @@ function bgp_summ($p=array(),$config=array()){
 				$data.=sprintf("%s",$nei['best']);
 			    }else{
 				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['best']);
+			    }
+			    $data.="&nbsp;/&nbsp;";
+			    if (config_val($config['output'],"hide","bgp_filtered_routes_link")){
+				$data.=sprintf("%s",$nei['filtered']);
+			    }else{
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_filtered&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['filtered']);
 			    }
 			    $data.="</td>";
 			    if (config_val($config['output'],"hide","bgp_export_routes_link")){
@@ -534,15 +544,30 @@ function bgp_neighbor_details($p=array(),$config=array()){
 			    $ret['data']['asn']=trim($m[1]);
 			}elseif (preg_match("/^BGP\sstate:\s+(\S+)$/",$v,$m)){
 			    $ret['data']['state']=trim($m[1]);
+/*
 			}elseif (preg_match("/^Routes:\s+(\d+)\s+imported,\s+(\d+)\s+exported,\s+(\d+)\s+preferred$/",$v,$m)){
 			    $ret['data']['accepted']=trim($m[1]);
 			    $ret['data']['best']=trim($m[3]);
 			    $ret['data']['exported']=trim($m[2]);
+*/
+			}elseif (preg_match("/^Routes:\s+(\d+)/",$v)){
+			    if (preg_match("/(\d+)\s+imported/",$v,$m)){
+				$ret['data']['accepted']=trim($m[1]);
+			    }
+			    if (preg_match("/(\d+)\s+exported/",$v,$m)){
+				$ret['data']['exported']=trim($m[1]);
+			    }
+			    if (preg_match("/(\d+)\s+preferred/",$v,$m)){
+				$ret['data']['best']=trim($m[1]);
+			    }
+			    if (preg_match("/(\d+)\s+filtered/",$v,$m)){
+				$ret['data']['filtered']=trim($m[1]);
+			    }
 			}
 		    }
 		}
 	}
-	
+
 	if ($p['full_info']){
 	    if (preg_match("/Routes:\s+\d+\s+imported,\s+\d+\s+exported,\s+\d+\s+preferred/",$show['data'])){
 		if (!config_val($config['output'],"hide","bgp_accepted_routes_link")){

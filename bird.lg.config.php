@@ -22,7 +22,7 @@ $config=array();
 */
 $config['timezone']="Europe/Moscow";
 $config['php_path']="/usr/local/bin/php";
-$config['asn_url']="https://apps.db.ripe.net/search/lookup.html?source=ripe&key=AS%ASNUMBER%&type=AUT_NUM";
+$config['asn_url']="https://apps.db.ripe.net/search/lookup.html?source=ripe&key=AS%ASNUMBER%&type=aut-num";
 
 /*
     BIRD sockets
@@ -232,7 +232,8 @@ $config['nodes'][$hin]['description'] = 'BIRD on localhost';
 	* bgp_accepted_routes_link - don`t display link for accepted routes in bgp summary output, default is false
 	* bgp_best_routes_link - don`t display link for best routes in bgp summary output, default is false
 	* bgp_export_routes_link - don`t display link for export routes in bgp summary output, default is false
-	
+	* bgp_filtered_routes_link - don`t display link for filtered routes in bgp summary output, default is false
+
 	possible values: true, false, restricted:
 	    * true: deny for all
 	    * false: permit for all
@@ -252,6 +253,7 @@ $config['output']['hide']['bgp_peer_det_link']=false;
 $config['output']['hide']['bgp_accepted_routes_link']=false;
 $config['output']['hide']['bgp_best_routes_link']=false;
 $config['output']['hide']['bgp_export_routes_link']=false;
+$config['output']['hide']['bgp_filtered_routes_link']=false;
 
 /*
     Communities list
