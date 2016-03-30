@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.4.0
+    BIRD Looking Glass :: Version: 0.4.1
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -10,13 +10,14 @@
 */
 
 ////////////////////// Functions file ////////////////////////////
-define('LG_VERSION',"0.4.0");
+define('LG_VERSION',"0.4.1");
 session_start();
 date_default_timezone_set($config['timezone']);
 error_reporting(E_ALL);
 //set_error_handler("exception_error_handler");
 
-$config_file="bird.lg.config.php";
+$pathinfo = realpath( dirname(__FILE__) );
+$config_file=$pathinfo."/bird.lg.config.php";
 if (is_file($config_file)){
     if (is_readable($config_file)){
 	if (!@include $config_file){

@@ -1,4 +1,27 @@
 ===========
+08.11.2014
+===========
+    Version 0.4.1 is released.
+
+    What`s new:
+	* bird.client.php now can be run not only from cli, now it support execution via TCP-based server also
+	How to install bird.client.php on remote host - read README file.
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * bird.client.php
+	    * CHANGELOG
+	    * README
+	4. edit your bird.lg.config.php:
+	    4.1 Add to "Bird client script" section:
+		$config['bird_client_remote']=false;
+		$config['bird_client_remote_permited_ips'][]="127.0.0.1";
+
+===========
 09.09.2014
 ===========
     Version 0.4.0 is released.

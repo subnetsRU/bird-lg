@@ -48,8 +48,10 @@ $config['birdc6']="/var/run/bird6.ctl";
 /*
     Bird client script
     ==================================
-    bird_client_dir: full path to directory where script bird.client.php is located
     bird_client_file: name of bird client script, default bird.client.php
+    bird_client_dir: full path to directory where script bird.client.php is located
+    bird_client_remote: if bird.client.php run on localhost set to false, if set to true bird.client.php will run as on remote host, default is false
+    bird_client_remote_permited_ips: if bird_client_remote is set to true than need to specify permitted IP`s for connection
     suppress_welcome: don`t print BIRD welcome string, where BIRD version is present
     ping_util: 
 	* path - full path to ipv4 ping utility
@@ -64,9 +66,14 @@ $config['birdc6']="/var/run/bird6.ctl";
 	* path - full path to IPv6 traceroute utility
 	* flags - add flags when execute traceroute utility
 */
-$config['bird_client_dir']="/full/path/to/bird.client/dir";
 $config['bird_client_file']="bird.client.php";
-$config['suppress_welcome']=true;
+$config['bird_client_dir']="/full/path/to/bird.client/dir";
+$config['bird_client_remote']=false;					//boolean: False | True
+$config['bird_client_remote_permited_ips']=array();
+$config['bird_client_remote_permited_ips'][]="127.0.0.1";
+//$config['bird_client_remote_permited_ips'][]="X.X.X.X";
+
+$config['suppress_welcome']=true;					//boolean: False | True
 
 $config['ping_util']['path']="/sbin/ping";
 $config['ping_util']['flags']="-c 5";
@@ -108,18 +115,18 @@ $config['asn']="51410";
 $config['contact_email']="your_email@domain.zone";
 $config['disclaimer']="All commands will be logged for possible later analysis and statistics. If you don't accept this policy, please close window now!";
 
-$config['check_new_version']=true;
-$config['log_query']=false;
-$config['log_query_result']=false;
+$config['check_new_version']=true;				//boolean: False | True
+$config['log_query']=false;					//boolean: False | True
+$config['log_query_result']=false;				//boolean: False | True
 $config['log_query_file']="";
-$config['clear_additional']=true;
+$config['clear_additional']=true;				//boolean: False | True
 
 /*
     IPv6
     =====
     Enable IPv6 support or not, default is false.
 */
-$config['ipv6_enabled']=false;
+$config['ipv6_enabled']=false;					//boolean: False | True
 
 /*
     Query types
@@ -139,65 +146,65 @@ $config['query']=array();
 
 $config['query']['route']=array();
 $config['query']['route']['name']="Show route";
-$config['query']['route']['disabled']=false;
-$config['query']['route']['additional_empty']=false;
-$config['query']['route']['restricted']=false;
+$config['query']['route']['disabled']=false;			//boolean: False | True
+$config['query']['route']['additional_empty']=false;		//boolean: False | True
+$config['query']['route']['restricted']=false;			//boolean: False | True
 $config['query']['route']['addon']="all";
 $config['query']['route']['placeholder']="enter IP-address or subnet";
 
 $config['query']['ping']=array();
 $config['query']['ping']['name']="Ping IP";
-$config['query']['ping']['disabled']=false;
-$config['query']['ping']['additional_empty']=false;
-$config['query']['ping']['restricted']=false;
+$config['query']['ping']['disabled']=false;			//boolean: False | True
+$config['query']['ping']['additional_empty']=false;		//boolean: False | True
+$config['query']['ping']['restricted']=false;			//boolean: False | True
 $config['query']['ping']['addon']="";
 $config['query']['ping']['placeholder']="enter IP-address";
 
 $config['query']['trace']=array();
 $config['query']['trace']['name']="Trace IP";
 $config['query']['trace']['disabled']=false;
-$config['query']['trace']['additional_empty']=false;
-$config['query']['trace']['restricted']=false;
+$config['query']['trace']['additional_empty']=false;		//boolean: False | True
+$config['query']['trace']['restricted']=false;			//boolean: False | True
 $config['query']['trace']['addon']="";
 $config['query']['trace']['placeholder']="enter IP-address";
 
 $config['query']['protocols']=array();
 $config['query']['protocols']['name']="Show protocols";
-$config['query']['protocols']['disabled']=false;
-$config['query']['protocols']['additional_empty']=true;
-$config['query']['protocols']['restricted']=false;
+$config['query']['protocols']['disabled']=false;		//boolean: False | True
+$config['query']['protocols']['additional_empty']=true;		//boolean: False | True
+$config['query']['protocols']['restricted']=false;		//boolean: False | True
 $config['query']['protocols']['addon']="";
 $config['query']['protocols']['placeholder']="leave empty or all or protocol name";
 
 $config['query']['bgp_summ']=array();
 $config['query']['bgp_summ']['name']="BGP summary";
-$config['query']['bgp_summ']['disabled']=false;
-$config['query']['bgp_summ']['additional_empty']=true;
-$config['query']['bgp_summ']['restricted']=false;
+$config['query']['bgp_summ']['disabled']=false;			//boolean: False | True
+$config['query']['bgp_summ']['additional_empty']=true;		//boolean: False | True
+$config['query']['bgp_summ']['restricted']=false;		//boolean: False | True
 $config['query']['bgp_summ']['addon']="";
 $config['query']['bgp_summ']['placeholder']="leave this field empty";
 
 $config['query']['export']=array();
 $config['query']['export']['name']="Advertised routes";
-$config['query']['export']['disabled']=false;
-$config['query']['export']['additional_empty']=false;
-$config['query']['export']['restricted']=false;
+$config['query']['export']['disabled']=false;			//boolean: False | True
+$config['query']['export']['additional_empty']=false;		//boolean: False | True
+$config['query']['export']['restricted']=false;			//boolean: False | True
 $config['query']['export']['addon']="all";
 $config['query']['export']['placeholder']="leave empty or protocol name";
 
 $config['query']['bfd_sessions']=array();
 $config['query']['bfd_sessions']['name']="BFD sessions";
-$config['query']['bfd_sessions']['disabled']=false;
-$config['query']['bfd_sessions']['additional_empty']=true;
-$config['query']['bfd_sessions']['restricted']=true;
+$config['query']['bfd_sessions']['disabled']=false;		//boolean: False | True
+$config['query']['bfd_sessions']['additional_empty']=true;	//boolean: False | True
+$config['query']['bfd_sessions']['restricted']=true;		//boolean: False | True
 $config['query']['bfd_sessions']['addon']="";
 $config['query']['bfd_sessions']['placeholder']="leave empty or IP-address";
 
 $config['query']['ospf_summ']=array();
 $config['query']['ospf_summ']['name']="OSPF neighbors";
-$config['query']['ospf_summ']['disabled']=false;
-$config['query']['ospf_summ']['additional_empty']=true;
-$config['query']['ospf_summ']['restricted']=true;
+$config['query']['ospf_summ']['disabled']=false;		//boolean: False | True
+$config['query']['ospf_summ']['additional_empty']=true;		//boolean: False | True
+$config['query']['ospf_summ']['restricted']=true;		//boolean: False | True
 $config['query']['ospf_summ']['addon']="";
 $config['query']['ospf_summ']['placeholder']="leave empty or Router ID";
 
@@ -275,18 +282,18 @@ $config['nodes'][$hin]['description'] = 'BIRD on localhost';
 $config['output']=array();
 
 $config['output']['modify']=array();
-$config['output']['modify']['routes']=false;
-$config['output']['modify']['protocols']=false;
-$config['output']['modify']['own_community']=false;
+$config['output']['modify']['routes']=false;				//boolean: False | True
+$config['output']['modify']['protocols']=false;				//boolean: False | True
+$config['output']['modify']['own_community']=false;			//boolean: False | True
 
 $config['output']['hide']=array();
-$config['output']['hide']['protocol']=false;
-$config['output']['hide']['iface']=false;
-$config['output']['hide']['bgp_peer_det_link']=false;
-$config['output']['hide']['bgp_accepted_routes_link']=false;
-$config['output']['hide']['bgp_best_routes_link']=false;
-$config['output']['hide']['bgp_export_routes_link']=false;
-$config['output']['hide']['bgp_filtered_routes_link']=false;
+$config['output']['hide']['protocol']=false;				//boolean: False | True
+$config['output']['hide']['iface']=false;				//boolean: False | True
+$config['output']['hide']['bgp_peer_det_link']=false;			//boolean: False | True
+$config['output']['hide']['bgp_accepted_routes_link']=false;		//boolean: False | True
+$config['output']['hide']['bgp_best_routes_link']=false;		//boolean: False | True
+$config['output']['hide']['bgp_export_routes_link']=false;		//boolean: False | True
+$config['output']['hide']['bgp_filtered_routes_link']=false;		//boolean: False | True
 
 /*
     BGP communities list

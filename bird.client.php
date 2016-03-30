@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.4.0
+    BIRD Looking Glass :: Version: 0.4.1
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -9,37 +9,130 @@
 
 */
 
-$pathinfo = pathinfo($argv[0]);
-$config=$pathinfo['dirname']."/bird.lg.config.php";
+define('DEBUG','1');	//0 - debug is OFF
+			//1 - debug is ON: print debug to log
+			//2 - debug is ON: print debug to log and console
+
+$pathinfo = realpath( dirname(__FILE__) );
+$config=$pathinfo."/bird.lg.config.php";
 if (is_file($config)){
     if (is_readable($config)){
 	if (!@include $config){
-	    print "[ERROR]: CONFIG not found\n";
+	    printf("[ERROR]: CONFIG file not found at %s\n",$config);
 	    exit(0);
 	}
     }else{
-	print "[ERROR]: CONFIG file not readable\n";
+	printf("[ERROR]: CONFIG file %s not readable\n",$config);
 	exit(0);
     }
 }else{
-    print "[ERROR]: CONFIG file don`t exists\n";
-    exit(0);
-}
-
-if (!isset($config['bird_client_dir'])&&$config['bird_client_dir']){
-    print "Config error: check bird client dir";
+    printf("[ERROR]: CONFIG file %s don`t exists\n",$config);
     exit(0);
 }
 
 date_default_timezone_set($config['timezone']);
+if (isset($config['bird_client_file']) && $config['bird_client_file']){
+    $script_name=$config['bird_client_file'];
+}else{
+    $script_name=preg_replace("/\//","_",$argv[0]);
+}
 
-$debug=0;	//0 - off, 1 - print to log (don`t forget to create & chown log file), 2 - print to log + console
-$script_dir=$config['bird_client_dir'];
-$log_dir=sprintf("%s",$script_dir);
-$script_name=sprintf("%s",isset($config['bird_client_file'])&&$config['bird_client_file']?$config['bird_client_file']:"bird.client");
+if (defined('DEBUG') && DEBUG > 0){
+    $flogfile=sprintf('%s/%s_%s.log',$pathinfo,date("Y-m-d",time()),$script_name);
+    $exec_res=0;
+    if (!@file_exists($flogfile)){
+        @exec("/usr/bin/touch $flogfile",$exec_out,$exec_res);
+    }
+    if (!$exec_res){
+	if (@file_exists($flogfile)){
+	    if (@is_writable($flogfile)){
+		$logfile = @fopen($flogfile, 'a');
+		define('LOGFILE',$logfile);
+	    }
+        }
+    }
+}
+
+logg();
+$run_as_remote=0;
+if (isset($config['bird_client_remote'])){
+    if ($config['bird_client_remote']){
+	$run_as_remote=1;
+    }
+}
+
+if ($run_as_remote==1){
+    logg("bird.client run as remote");
+    $stdin = fopen('php://stdin', 'r');
+    $stdout = fopen('php://stdout', 'w');
+    $remote_ip=isset($_SERVER['TCPREMOTEIP']) ? $_SERVER['TCPREMOTEIP'] : "";
+    $permited_ips=isset($config['bird_client_remote_permited_ips']) ? $config['bird_client_remote_permited_ips'] : array();
+
+    if ($remote_ip){
+	if (bird_client_remote_access($permited_ips,$remote_ip)){
+	    $exit=0;
+	    logg(sprintf("Remote connection from %s",$remote_ip ? $remote_ip : "NULL"));
+	    $var=array();
+	    while (!feof($stdin)) {
+		$temp = fgets($stdin);
+		$temp = str_replace("\n","",$temp);
+		$tmp=trim($temp);
+		$p=explode(";",$tmp);
+		foreach ($p as $par){
+		    if ($par){
+			$var[] = $par;
+		    }
+		}
+		break;
+	    }
+
+	    if (count($var)>0){
+		$argv[]="-c";
+		$get_var=explode(" ",isset($var[0]) ? $var[0] : array() );
+		foreach ($get_var as $par){
+		    $argv[]=$par;
+		}
+	    }
+	}else{
+	    logg(sprintf("Remote connection FORBIDDEN for %s",$remote_ip ? $remote_ip : "NULL"));
+	    printf("[ERROR]: Remote connection from %s is forbidden\n",$remote_ip ? $remote_ip : "NULL");
+	    exit;
+	}
+    }else{
+	logg(sprintf("Remote IP is unknown"));
+	printf("[ERROR]: Remote IP is unknown");
+	exit;
+    }
+}else{
+    logg("bird.client run as local");
+}
+
 $params_in=$argv;
-array_shift($params_in);
+if (is_array($params_in)){
+    array_shift($params_in);
+    if (count($params_in) > 0){
+        logg("++++++++++++ got params +++++++++++++++");
+	foreach ($params_in as $k=>$v) {
+	    logg(" -- $k = $v");
+	}
 
+	$command="";
+	if (preg_match("/^-c$/",$params_in[0])){
+	    unset($params_in[0]);
+	    $command=implode(" ",$params_in);
+	}
+        if ($command){
+    	    logg("execute command [".$command."]");
+        }else{
+	    usage($argv);
+        }
+    }else{
+	usage($argv);
+    }
+}else{
+    usage($argv);
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 $permitted_commands=array("show","ping","ping6","trace","trace6");
 
 $bird_success_codes=array(
@@ -78,42 +171,6 @@ $bird_error_codes = array(
 
 $bird_end_codes=$bird_error_codes + $bird_success_codes;
 
-if ($debug){
-    $mkdir=0;
-    if (@is_dir($log_dir)){
-        $flogfile=sprintf('%s/%s_%s.log',$log_dir,date("Y-m-d",time()),$script_name);
-        if (!@file_exists($flogfile)){
-            @exec("/usr/bin/touch $flogfile");
-        }
-        if (@is_writable($flogfile)){
-            $logfile = @fopen($flogfile, 'a');
-        }
-    }
-}
-
-if (is_array($params_in)){
-    if (count($params_in)==0){
-	usage($argv);
-    }else{
-        logg("++++++++++++ got params +++++++++++++++");
-        logg(print_r($params_in, true));
-
-	$command="";
-	if (preg_match("/^-c$/",$params_in[0])){
-	    unset($params_in[0]);
-	    $command=implode(" ",$params_in);
-	}
-        if ($command){
-    	    logg($command);
-        }else{
-	    usage($argv);
-        }
-    }
-}else{
-    usage($argv);
-}
-
-
 $error=array();
 $bird_data="";
 
@@ -137,7 +194,7 @@ if (is_array($permitted_commands)){
 
 if ($query_type){
     if (preg_match("/^(ping|ping6)$/",$query_type) || preg_match("/^(trace|trace6)$/",$query_type)){
-	//
+	//Do nothing here
     }else{
 	if (is_array($config)){
 	    if (isset($config['birdc'])||isset($config['birdc6'])){
@@ -158,6 +215,7 @@ if ($query_type){
 }else{
     $error[]="Can`t get query type";
 }
+
 if (count($error)==0){
     if (preg_match("/^(ping|ping6)$/",$query_type) || preg_match("/^(trace|trace6)$/",$query_type)){
 	if (preg_match("/^(ping|ping6)$/",$query_type)){
@@ -216,19 +274,25 @@ if (count($error)==0){
 
 if (count($error)==0){
     logg($bird_data);
-    if ($debug<2){print $bird_data."\r\n";}
+    if (DEBUG < 2){
+	print $bird_data."\r\n";
+    }
 }else{
     $err_txt="BIRD client errors:\n";
     foreach ($error as $key => $val){
 	$err_txt.=sprintf("\t%d: %s\n",$key+1,$val);
     }
     logg($err_txt);
-    if ($debug<2){print $err_txt."\r\n";}
+    if (DEBUG < 2){
+	print $err_txt."\r\n";
+    }
 }
 exit(0);
 
 function usage($argv){
-    printf("\nUsage: php %s -c [ipv4|ipv6]: <command>\n",$argv[0]);
+    logg("Params are wrong... see usage");
+    printf("\nUsage: php %s -c [ipv4|ipv6]: client_command\n",$argv[0]);
+    print "See README file for details\n";
     exit(0);
 }
 
@@ -312,15 +376,35 @@ function trace($config,$command,$protocol="ipv4"){
  return $ret;
 }
 
-function logg($text){
-    global $debug,$logfile;
-    if ($debug>0){
-        if (@is_resource($logfile)){
-            @fputs($logfile,sprintf("[%s]: %s\n",date("Y-m-d H:i:s"),$text));
-        }
+function bird_client_remote_access($permited_ips="",$remote_ip=""){
+    $ret=0;
+    if ( is_array($permited_ips) && $remote_ip ){
+	foreach ($permited_ips as $ip){
+	    if ($remote_ip==$ip){
+		$ret=1;
+		break;
+	    }
+	}
     }
-    if ($debug>1){
-        print "$text\n";
+ return $ret;
+}
+
+function logg($text=""){
+//    global $debug,$logfile;
+    if (defined('DEBUG') && DEBUG > 0){
+	if (defined('LOGFILE') && LOGFILE > 0){
+	    if (@is_resource(LOGFILE)){
+		if (strlen($text)>0){
+		    $text=sprintf("[%s]: %s\n",date("Y-m-d H:i:s"),$text);
+		}else{
+		    $text="\n";
+		}
+		@fputs(LOGFILE,$text);
+	    }
+	}
+	if ( DEBUG > 1 ){
+	    printf("%s\n",$text);
+	}
     }
 }
 

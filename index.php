@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.4.0
+    BIRD Looking Glass :: Version: 0.4.1
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -11,7 +11,8 @@
 
 //////////////////////// Index file /////////////////////////////
 
-$func="func.php";
+$pathinfo = realpath( dirname(__FILE__) );
+$func=$pathinfo."/func.php";
 if (!@include $func){
     print "[ERROR]: Fuctions file not found\n";
     exit;
