@@ -1,8 +1,36 @@
 ===========
+21.12.2013
+===========
+    Version 0.3.0 is released.
+
+    What`s new:
+	* add new abilities to web interface
+	* bug fixes
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * bird.client.php
+	    * CHANGELOG
+	    * README
+	4. edit your bird.lg.config.php:
+	    4.1. Add to "Query types" section:
+		    $config['query']['bgp_summ']=array();
+		    $config['query']['bgp_summ']['name']="BGP summary";
+		    $config['query']['bgp_summ']['additional_empty']=true;
+		    $config['query']['bgp_summ']['restricted']=false;
+		    $config['query']['bgp_summ']['addon']="";
+	    4.2. Add to "Bird output" section:
+		    $config['output']['hide']['bgp_peer_det_link']=false;
+
+===========
 03.12.2013
 ===========
     Version 0.2.0 is released.
-    
+
     What`s new:
 	* add new commands:
 	    ** show protocols
@@ -10,7 +38,7 @@
 	    ** show route export
 	* add new abilities to web interface
 	* bug fixes
-    
+
     Upgrade instructions:
 	1. download archive with new version
 	2. unpack archive

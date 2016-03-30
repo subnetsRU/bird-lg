@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.2.0
+    BIRD Looking Glass :: Version: 0.3.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)

@@ -1,4 +1,4 @@
-		    README v0.2
+		    README v0.3
 		*******************
 
  Looking Glass (LG) for the Internet Routing Daemon "BIRD" 
@@ -78,58 +78,58 @@ LG working schemes:
                                                +--> + LOCALHOST + --> * bird.client.php * ----> * BIRD sockets *
                                                |    +++++++++++++     *******************       ****************
                                                |
-++++++++       ++++++++++++++++++++++++++++++  |    +++++++++++++++     ++++++++++++++++++++       +++++++++++++++++++       ++++++++++++++++
-+ USER + ----> + http://webserver/index.php +--+--> + REMOTE HOST + --> + TCP-based server + ----> + bird.client.php + ----> + BIRD sockets +
-++++++++       ++++++++++++++++++++++++++++++  |    +++++++++++++++     ++++++++++++++++++++       +++++++++++++++++++       ++++++++++++++++
+********       ******************************  |    +++++++++++++++     ********************       *******************       ****************
+* USER * ----> * http://webserver/index.php *--+--> + REMOTE HOST + --> * TCP-based server * ----> * bird.client.php * ----> * BIRD sockets *
+********       ******************************  |    +++++++++++++++     ********************       *******************       ****************
                                                |  
-                                               |    +++++++++++++++     ++++++++++++++++++++       +++++++++++++++++++       ++++++++++++++++
-                                               +--> + REMOTE HOST + --> + TCP-based server + ----> + bird.client.php + ----> + BIRD sockets +
-                                               |    +++++++++++++++     ++++++++++++++++++++       +++++++++++++++++++       ++++++++++++++++
+                                               |    +++++++++++++++     ********************       *******************       ****************
+                                               +--> + REMOTE HOST + --> * TCP-based server * ----> * bird.client.php * ----> * BIRD sockets *
+                                               |    +++++++++++++++     ********************       *******************       ****************
                                                |
                                                |
                                                +--> .....etc......
 
 Files
 ++++++
- - bird.lg.config.php - configuration file;
- - func.php - php functions;
- - index.php - index file with request form;
- - bird.client.php - php client for connect and run commands on BIRD socket;
- - js/mt145.js - mootools: http://mootools.net/
- - css/style.css - CSS style file
- - img/indicator.gif - request process image
- - favicon.ico - icon image
+ * bird.lg.config.php - configuration file;
+ * func.php - php functions;
+ * index.php - index file with request form;
+ * bird.client.php - php client for connect and run commands on BIRD socket;
+ * js/mt145.js - mootools: http://mootools.net/
+ * css/style.css - CSS style file
+ * img/indicator.gif - request process image
+ * favicon.ico - icon image
 
 Availiable query types in web interface:
 +++++++++++++++++++++++++++++++++++
-    - "Show route" with "additional parameters" IPv4 or IPv6 IP-ADDRESS or SUBNET
-    - "Ping IP" with "additional parameters" IPv4 or IPv6 IP-ADDRESS
-    - "Trace IP" with "additional parameters" IPv4 or IPv6 IP-ADDRESS
-    - "Show protocols" without "additional parameters"
-    - "Show protocols" with "additional parameters" PROTOCOL_NAME
-    - "Show protocols" with "additional parameters" all PROTOCOL_NAME
-    - "Advertised routes" with "additional parameters" PROTOCOL_NAME
+    * "Show route" with "additional parameters" IPv4 or IPv6 IP-ADDRESS or SUBNET
+    * "Ping IP" with "additional parameters" IPv4 or IPv6 IP-ADDRESS
+    * "Trace IP" with "additional parameters" IPv4 or IPv6 IP-ADDRESS
+    * "Show protocols" without "additional parameters"
+    * "Show protocols" with "additional parameters" PROTOCOL_NAME
+    * "Show protocols" with "additional parameters" all PROTOCOL_NAME
+    * "Advertised routes" with "additional parameters" PROTOCOL_NAME
 
 A few words about bird.client.php
 ++++++++++++++++++++++++++++++++++
  It can be run separately from web-interface from cli of your server. It gets commands on input and execute them.
  Usage: php bird.client.php -c [ipv4|ipv6]: <command>
  For now bird.client.php suport these commands:
-    - bird.client.php -c ipv4: show route for X.X.X.X
-    - bird.client.php -c ipv4: show route X.X.X.X/Y
-    - bird.client.php -c ipv4: show protocols
-    - bird.client.php -c ipv4: show protocols all
-    - bird.client.php -c ipv4: show route export PROTOCOL_NAME
-    - bird.client.php -c ipv4: ping X.X.X.X
-    - bird.client.php -c ipv4: trace X.X.X.X
+    * bird.client.php -c ipv4: show route for X.X.X.X
+    * bird.client.php -c ipv4: show route X.X.X.X/Y
+    * bird.client.php -c ipv4: show protocols
+    * bird.client.php -c ipv4: show protocols all
+    * bird.client.php -c ipv4: show route export PROTOCOL_NAME
+    * bird.client.php -c ipv4: ping X.X.X.X
+    * bird.client.php -c ipv4: trace X.X.X.X
 
-    - bird.client.php -c ipv6: show route for 200X:XXXX::XXXX
-    - bird.client.php -c ipv6: show route 200X:XXXX::XXXX/XXX
-    - bird.client.php -c ipv6: show protocols
-    - bird.client.php -c ipv6: show protocols all
-    - bird.client.php -c ipv6: show route export PROTOCOL_NAME
-    - bird.client.php -c ipv6: ping6 200X:XXXX::XXXX
-    - bird.client.php -c ipv6: trace6 200X:XXXX::XXXX
+    * bird.client.php -c ipv6: show route for 200X:XXXX::XXXX
+    * bird.client.php -c ipv6: show route 200X:XXXX::XXXX/XXX
+    * bird.client.php -c ipv6: show protocols
+    * bird.client.php -c ipv6: show protocols all
+    * bird.client.php -c ipv6: show route export PROTOCOL_NAME
+    * bird.client.php -c ipv6: ping6 200X:XXXX::XXXX
+    * bird.client.php -c ipv6: trace6 200X:XXXX::XXXX
 
  So it can run on remote host with the support of TCP-based server. 
  Example of the TCP-based server http://cr.yp.to/ucspi-tcp.html (/usr/ports/sysutils/ucspi-tcp/pkg-descr).
@@ -154,9 +154,9 @@ Installing
 Notes
 ++++++
     Permissions on BIRD daemon socket: 
-	- you must set write permissions on BIRD sockets so user/group who runs HTTP server can write to the BIRD socket
+	* you must set write permissions on BIRD sockets so user/group who runs HTTP server can write to the BIRD socket
 	    exmpl: chmod o=w /path/to/bird.ctl
-	- socket permissions will be rewrited after BIRD daemon restarted - keep this in mind
+	* socket permissions will be rewrited after BIRD daemon restarted - keep this in mind
 
     It should be noted that you can run bird.client.php on localhost with the support of TCP-based server.
     If TCP-based server is started from user root and group wheel than you don`t need to edit permissions on BIRD socket.
@@ -165,24 +165,24 @@ Notes
     TESTED
 ================================================================================================================================
 Only tested on:
-    - OS: FreeBSD, versions: 8.3, 8.4, 9.1
-    - BIRD: version 1.3.11
-    - PHP: version 5.4.21
-    - HTTP: Apache 2.2.25
+    * OS: FreeBSD, versions: 8.3, 8.4, 9.1
+    * BIRD versions: 1.3.11, 1.4.0
+    * PHP: version 5.4.21
+    * HTTP: Apache 2.2.25
 
 ================================================================================================================================
     SUPPORT
 ================================================================================================================================
 You can request for support or report bug:
-    - email: lg@subnets.ru
-    - www: 
+    * email: lg@subnets.ru
+    * www: 
 	    - http://subnets.ru/wrapper.php?p=100
 	    - http://subnets.ru/forum/
 
 It necessarily should be attached:
-    - your OS version: uname -a
-    - your PHP version: php -v
-    - a detailed description of your question
+    * your OS version: uname -a
+    * your PHP version: php -v
+    * a detailed description of your question
 Otherwise your request goes to /dev/null.
 
 Please understand that we do not promise to answer your request but we will try to.

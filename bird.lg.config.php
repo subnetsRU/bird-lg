@@ -152,13 +152,19 @@ $config['query']['trace']['addon']="";
 $config['query']['protocols']=array();
 $config['query']['protocols']['name']="Show protocols";
 $config['query']['protocols']['additional_empty']=true;
-$config['query']['protocols']['restricted']=true;
+$config['query']['protocols']['restricted']=false;
 $config['query']['protocols']['addon']="";
+
+$config['query']['bgp_summ']=array();
+$config['query']['bgp_summ']['name']="BGP summary";
+$config['query']['bgp_summ']['additional_empty']=true;
+$config['query']['bgp_summ']['restricted']=false;
+$config['query']['bgp_summ']['addon']="";
 
 $config['query']['export']=array();
 $config['query']['export']['name']="Advertised routes";
 $config['query']['export']['additional_empty']=false;
-$config['query']['export']['restricted']=true;
+$config['query']['export']['restricted']=false;
 $config['query']['export']['addon']="all";
 
 /*
@@ -221,6 +227,7 @@ $config['nodes'][$hin]['description'] = 'BIRD on localhost';
     hide:
 	* protocol - don`t display bird`s protocol names in route output, default is false
 	* iface - don`t display interface names in route output, default is false
+	* bgp_peer_det_link - don`t display bgp peer detail link (ex. in bgp summary output), default is false
 */
 $config['output']=array();
 
@@ -232,6 +239,7 @@ $config['output']['modify']['own_community']=false;
 $config['output']['hide']=array();
 $config['output']['hide']['protocol']=false;
 $config['output']['hide']['iface']=false;
+$config['output']['hide']['bgp_peer_det_link']=false;
 
 /*
     Communities list

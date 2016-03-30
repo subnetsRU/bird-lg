@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.2.0
+    BIRD Looking Glass :: Version: 0.3.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -29,7 +29,7 @@ required_for_run();
 
 session_start();
 date_default_timezone_set($config['timezone']);
-define('LG_VERSION',"0.2.0");
+define('LG_VERSION',"0.3.0");
 
 function head($title="LG"){
         printf ("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
@@ -279,7 +279,7 @@ function check_ip_input($p){
  return $ret;
 }
 
-function bird_send_cmd($p=array(),$config=array()){
+function process_query($p=array(),$config=array()){
     $ret=array();
     $ret['error']="";
     $put_2_log=array();
@@ -298,7 +298,7 @@ function bird_send_cmd($p=array(),$config=array()){
     }
 
     if ($p['query']){
-	$cmd="";
+	$p['cmd']="";
 	$addon="";
 
 	if ( $p['query']=="route" || $p['query']=="ping" || $p['query']=="trace" ){
@@ -324,9 +324,9 @@ function bird_send_cmd($p=array(),$config=array()){
 	}
 	if ($p['query']=="route"){
 	    if (preg_match("/\/\d{1,3}$/",$p['additional'])){
-		    $cmd=sprintf("show route %s%s",$p['additional'],$addon);
+		    $p['cmd']=sprintf("show route %s%s",$p['additional'],$addon);
 	    }else{
-		    $cmd=sprintf("show route for %s%s",$p['additional'],$addon);
+		    $p['cmd']=sprintf("show route for %s%s",$p['additional'],$addon);
 	    }
 	}elseif ( $p['query']=="ping" || $p['query']=="trace" ){
 	    if (($p['protocol']=="IPv4"&&$p['additional']=="0.0.0.0") || ($p['protocol']=="IPv6"&&$p['additional']=="::/0")){
@@ -338,9 +338,9 @@ function bird_send_cmd($p=array(),$config=array()){
 		return $ret;
 	    }
 	    if ($p['query']=="ping"){
-	        $cmd=sprintf("ping%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
+	        $p['cmd']=sprintf("ping%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
 	    }elseif($p['query']=="trace"){
-	        $cmd=sprintf("trace%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
+	        $p['cmd']=sprintf("trace%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
 	    }
 	}elseif ($p['query']=="protocols"){
 	    if ($p['additional']){
@@ -349,7 +349,7 @@ function bird_send_cmd($p=array(),$config=array()){
 		    return $ret;
 		}
 	    }
-	    $cmd=sprintf("show protocols %s%s",$p['additional'],$addon);
+	    $p['cmd']=sprintf("show protocols %s%s",$p['additional'],$addon);
 	}elseif ($p['query']=="export"){
 	    if ($p['additional']){
 		if (!preg_match("/^[a-zA-Z0-9\_\s]+$/",$p['additional'])){
@@ -360,16 +360,177 @@ function bird_send_cmd($p=array(),$config=array()){
 		$ret['error']=error("You must enter protocol name in additional parameters");
 		return $ret;
 	    }
-	    $cmd=sprintf("show route export %s%s",$p['additional'],$addon);
+	    $p['cmd']=sprintf("show route export %s%s",$p['additional'],$addon);
+	}elseif ($p['query']=="bgp_summ"){
+	    $p['additional']="";
+	    $p['cmd']="show protocols";
+	    $p['fake_cmd']="bgp summary";
 	}
-
-	$router_name=sprintf("%s %s",$config['nodes'][$p['router']]['name'],$config['nodes'][$p['router']]['description']?sprintf(" (%s)",$config['nodes'][$p['router']]['description']):"");
-	printf("<b>Router: %s</b><BR>",$router_name);
-	printf("<b>Command: %s</b><BR>",$cmd);
+	
+	$p['router_name']=sprintf("%s %s",$config['nodes'][$p['router']]['name'],$config['nodes'][$p['router']]['description']?sprintf(" (%s)",$config['nodes'][$p['router']]['description']):"");
+	printf("<b>Router: %s</b><BR>",$p['router_name']);
+	printf("<b>Command: %s</b><BR>",isset($p['fake_cmd'])?$p['fake_cmd']:$p['cmd']);
 	print "<br>";
+	if ($p['query']=="bgp_summ"){
+	    $ret=bgp_summ($p,$config);
+	}else{
+	    $ret=bird_send_cmd($p,$config);
+	}
+    }
+ return $ret;
+}
 
-	if ($cmd){
-	    $p['cmd']=sprintf("%s: %s",strtolower($p['protocol']),$cmd);
+function bgp_summ($p=array(),$config=array()){
+    $ret=array();
+    $ret['error']="";
+    $data=array();
+
+    $ret=bird_send_cmd($p,$config);
+    //deb($ret);
+    if ($ret['error']){
+	return $ret;
+    }else{
+	$tmp=explode("\n",$ret['data']);
+	$ret['data']="";
+	if (count($tmp)>0){
+	    $bgp_peers=array();
+	    $nn=0;
+	    foreach($tmp as $v){
+		if ($v){
+		    if (preg_match("/^([a-zA-Z0-9\_]+)\s+BGP\s+\S+\s+\S+\s+(\S+)/i",$v,$m)){
+			//deb($m);
+			$bgp_peers[$nn]['name']=$m[1];
+			$bgp_peers[$nn]['date']=$m[2];
+			$nn++;
+		    }
+		}
+	    }
+	    //deb($bgp_peers);
+	    $total_peers=count($bgp_peers);
+	    if ($total_peers>0){
+		$hide_protocol=config_val($config['output']['hide'],"protocol");
+		$data=sprintf("<b>Total number of BGP neighbors: %d</b>\n",$total_peers);
+		$data.="BGP neighbors Up: %TOTAL_UP% <font color=\"red\">Down:  %TOTAL_DOWN%</font>\n";
+		$data.="<b>Number of unique ASN: %TOTAL_UNIQ%</b>\n";
+		$data.="\n";
+		//$data.="<style>td{padding-left: 5px; paddinf-right:5px;}</style>\n";
+		$data.="<table width=\"100%\" cellspacing=\"2\" cellpadding=\"5\" border=\"0\">";
+		$data.="<tr>";
+		$data.="<th class=\"head\">#</th>";
+		if (!$hide_protocol){
+		    $data.="<th class=\"head\">Peer name</th>\n";
+		}
+		$data.="<th class=\"head\">Neighbor</th>";
+		$data.="<th class=\"head\">ASN</th>";
+		$data.="<th class=\"head\">Date</th>";
+		$data.="<th class=\"head\">State</th>";
+		$data.="<th class=\"head\">Accepted/Best</th>";
+		//$data.="<th class=\"head\">ErrCode</th>\n";
+		$data.="</tr>\n";
+		$data.="<tr>\n";
+
+		$asn_uniq=0;
+		$asn=array();
+		$total_up=0;
+		foreach ($bgp_peers as $k => $peer){
+		    $p['peer']=$peer['name'];
+		    $neighbor=bgp_neighbor_details($p,$config);
+		    $nei=$neighbor['data'];
+		    //deb($nei);
+		    $state_up=0;
+		    if (strtolower($nei['state'])=="established"){
+			$state_up=1;
+		    }
+
+		    $data.=sprintf("<tr%s>\n",$state_up?"":" style=\"color:red;\"");
+		    $data.=sprintf("<td>%d</td>",$k+1);
+		    if (!$hide_protocol){
+			$data.=sprintf("<td>%s</td>",$peer['name']);
+		    }
+		    if ($neighbor['error']){
+			$data.=sprintf("<td colspan=6><font color=\"darkred\"><i>can`t get neighbor%s info</i></font></td>\n",$hide_protocol?"":sprintf(" <b>%s</b>",$peer['name']));
+		    }else{
+			if (config_val($config['output']['hide'],"bgp_peer_det_link")){
+			    $data.=sprintf("<td>%s</td>",$nei['addr']);
+			}else{
+			    $data.=sprintf("<td><a style=\"cursor: pointer;\" onclick=\"det('query=bgp_det&router=%s&protocol=%s&peer=%s');\"><u>%s</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr']);
+			}
+			$data.=sprintf("<td align=\"center\">%s</td>",$nei['asn']);
+			$data.=sprintf("<td align=\"center\">%s</td>",$peer['date']);
+			$data.=sprintf("<td align=\"center\">%s</td>",$nei['state']);
+			if ($state_up){
+			    $data.=sprintf("<td>%s/%s</td>",$nei['accepted'],$nei['best']);
+			}else{
+			    $data.="<td>&nbsp;</td>";
+			}
+			
+			if(!in_array($nei['asn'],$asn)){
+			    $asn[]=$nei['asn'];
+			    $asn_uniq++;
+			}
+		    }
+		    $data.="</tr>";
+		    if ($state_up){
+			$total_up++;
+		    }
+		}
+		$data.="</table>\n";
+		$ret['data']=preg_replace("/%TOTAL_UP%/",$total_up,$data);
+		$ret['data']=preg_replace("/%TOTAL_DOWN%/",sprintf("%d",$total_peers-$total_up),$ret['data']);
+		$ret['data']=preg_replace("/%TOTAL_UNIQ%/",$asn_uniq,$ret['data']);
+	    }else{
+		$ret['error']=sprintf("%s",error("BGP peers not found"));
+	    }
+	}else{
+	    $ret['error']=sprintf("%s",error("Get summary failed"));
+	}
+    }
+ return $ret;
+}
+
+function bgp_neighbor_details($p=array(),$config=array()){
+    $ret=array();
+    $ret['error']="";
+    $ret['data']=array();
+
+    unset($p['cmd']);
+    $p['cmd']=sprintf("show protocols all %s",$p['peer']);
+    $show=bird_send_cmd($p,$config);
+    if ($show['error']){
+	$ret['error']=$show['error'];
+    }else{
+	if ($p['full_info']){
+	    return $show;
+	}else{
+	    $tmp=explode("\n",$show['data']);
+	    if (count($tmp)>0){
+		//deb($tmp);
+		foreach ($tmp as $k => $v){
+		    if ($v){
+			if (preg_match("/^Neighbor\saddress:(.*)$/",$v,$m)){
+			    $ret['data']['addr']=trim($m[1]);
+			}elseif (preg_match("/^Neighbor\sAS:\s+(\d+)$/",$v,$m)){
+			    $ret['data']['asn']=trim($m[1]);
+			}elseif (preg_match("/^BGP\sstate:\s+(\S+)$/",$v,$m)){
+			    $ret['data']['state']=trim($m[1]);
+			}elseif (preg_match("/^Routes:\s+(\d+)\s+imported,\s+(\d+)\s+exported,\s+(\d+)\s+preferred$/",$v,$m)){
+			    $ret['data']['accepted']=trim($m[1]);
+			    $ret['data']['best']=trim($m[3]);
+			}
+		    }
+		}
+	    }
+	}
+    }
+ return $ret;
+}
+
+function bird_send_cmd($p=array(),$config=array()){
+    $ret=array();
+    $ret['error']="";
+    $put_2_log=array();
+	if ($p['cmd']){
+	    $p['cmd']=sprintf("%s: %s",strtolower($p['protocol']),$p['cmd']);
 	    $conn=connect_2_bird($p,$config);
 	    if ($conn['error']){
 		$ret['error']=$conn['error'];
@@ -385,14 +546,13 @@ function bird_send_cmd($p=array(),$config=array()){
 	}
 	
 	if (isset($config['log_query'])&&$config['log_query']){
-	    $put_2_log[]=sprintf("Router: %s",$router_name);
-	    $put_2_log[]=sprintf("Command: %s",$cmd);
+	    $put_2_log[]=sprintf("Router: %s",$p['router_name']);
+	    $put_2_log[]=sprintf("Command: %s",$p['cmd']);
 	    if (isset($config['log_query_result'])&&$config['log_query_result']){
 		$put_2_log[]=sprintf("Result:\n%s",$ret['error']?$ret['error']:$ret['data']);
 	    }
 	    logging($config,$put_2_log);
 	}
-    }
  return $ret;
 }
 
@@ -572,30 +732,35 @@ function parse_bird_data($data,$query,$config){
 	    }
 	}
     }elseif ($query=="protocols"){
-	if (config_val($config['output']['modify'],"protocols")){
-	    $ret="";
-	    $proto=array("Direct","Kernel","Device","Static","Pipe","BGP","OSPF","RIP","RAdv","bfd");
-
-	    if (is_array($proto)){
+	$ret="";
+	$proto=array("Direct","Kernel","Device","Static","Pipe","BGP","OSPF","RIP","RAdv","bfd");
+	if (is_array($proto)){
 		if (count($proto)==1){
 		    $protos=$proto[0];
 		}else{
 		    $protos=sprintf("(%s)",implode("|",$proto));
 		}
-	    }
-	    $tmp=explode("\n",$data);
-	    foreach ($tmp as $str){
-		if (preg_match(sprintf("/\s+%s\s+/i",$protos),$str)){
-		    if (preg_match("/^\S+\s+\S+\s+\S+\s+(down)/",$str)){
-			$ret.=preg_replace("/^(.*)$/","\n<b><font size=\"+1\" color=\"red\">\$1</font></b>",$str);
+	}
+	$tmp=explode("\n",$data);
+	foreach ($tmp as $str){
+		if (config_val($config['output']['modify'],"protocols")){
+		    if (preg_match(sprintf("/\s+%s\s+/i",$protos),$str)){
+			if (preg_match("/^\S+\s+\S+\s+\S+\s+(down)/",$str)){
+			    if (config_val($config['output']['hide'],"protocol")){
+				$str=preg_replace("/^[a-zA-Z0-9\_]+\s/","<i>hidden</i>",$str);
+			    }
+			    $ret.=preg_replace("/^(.*)$/","\n<b><font size=\"+1\" color=\"red\">\$1</font></b>",$str);
+			}else{
+			    if (config_val($config['output']['hide'],"protocol")){
+				$str=preg_replace("/^[a-zA-Z0-9\_]+\s/","<i>hidden</i>",$str);
+			    }
+			    $ret.=preg_replace("/^(.*)/","\n<font size=\"+1\"><b>\$1</b></font>",$str);
+			}
+			$ret.="\n";
 		    }else{
-			$ret.=preg_replace("/^(.*)/","\n<font size=\"+1\"><b>\$1</b></font>",$str);
+			$ret.=sprintf("%s\n",trim($str));
 		    }
-		    $ret.="\n";
-		}else{
-		    $ret.=sprintf("%s\n",trim($str));
 		}
-	    }
 	}
     }
  return $ret;

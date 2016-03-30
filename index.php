@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.2.0
+    BIRD Looking Glass :: Version: 0.3.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -62,7 +62,17 @@ if (!isset($param['query'])&&!$param['query']){
 	    $('errors').empty();
 	    $('errors').innerHTML='Errors:<ul>'+err+'</ul>';
 	}";
-    print "}";
+    print "}\n";
+    print "function det(reqv){
+	div=$('content');
+	if (reqv){
+	    div.innerHTML='<center><BR><img src=\"img/indicator.gif\"><BR><b>Processing...</b></center>';
+	    new Request.HTML({url: 'index.php', method: 'post', update: div}).send(reqv);
+	}else{
+	    $('errors').empty();
+	    $('errors').innerHTML='Errors:<ul>Query was empty</ul>';
+	}
+    }\n";
     if (isset($config['check_new_version'])){
 	if ($config['check_new_version']){
 	    print "function check_new_version(){
@@ -120,12 +130,46 @@ if (!isset($param['query'])&&!$param['query']){
 	}
     }else{
 	print "<script>$('errors').empty();</script>";
+	$back_but="<button class=\"but\" onclick=\"request('0');\">New request</button><BR><BR>";
 	if ($query=="main_form"){
 	    printf("%s",main_form($config));
+	}elseif ($query=="bgp_det"){
+	    print $back_but;
+	    if (!$param['protocol']){$param['protocol']="IPv4";}
+	    if ($param['peer']&&$param['router']){
+		$param['cmd']="show protocols";
+		$result=bird_send_cmd($param,$config);
+		//deb($result);
+		if ($result['error']){
+		    printf("%s",$result['error']);
+		}else{
+		    $tmp=explode("\n",$result['data']);
+		    foreach ($tmp as $k => $v){
+			if (preg_match("/^([a-zA-Z0-9\_]+)\s+BGP\s+/",$v,$m)){
+			    if (md5($m[1])==$param['peer']){
+				$peer=$m[1];
+			    }
+			}
+		    }
+		    if ($peer){
+			$param['peer']=$peer;
+			$param['full_info']=true;
+			$result=bgp_neighbor_details($param,$config);
+			//deb($result);
+			if ($result['error']){
+			    printf("%s",$result['error']);
+			}else{
+			    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"protocols",$config));
+			}
+		    }else{
+			printf("%s",error("Peer not found"));
+		    }
+		}
+	    }else{
+		printf("%s",error("Params is missing"));
+	    }
 	}else{
-	    print "<button class=\"but\" onclick=\"request('0');\">New request</button>";
-	    print "<BR>";
-	    print "<BR>";
+	    print $back_but;
 	    if (is_array($config['query'])){
 		if (isset($config['query'][$query])){
 		    if (!isset($param['protocol'])){
@@ -135,7 +179,7 @@ if (!isset($param['query'])&&!$param['query']){
 		    if ($chk['error']){
 			print $chk['error'];
 		    }else{
-			$result=bird_send_cmd($param,$config);
+			$result=process_query($param,$config);
 			if ($result['error']){
 			    printf("%s",$result['error']);
 			}else{
