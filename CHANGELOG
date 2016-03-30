@@ -1,4 +1,34 @@
 ===========
+22.12.2013
+===========
+    Version 0.3.1 is released.
+
+    What`s new:
+	* add new abilities to web interface
+	    ** show bgp neighbor detail link in bgp summary
+	    ** show bgp neighbor routes link in bgp summary
+	    ** show bgp neighbor best routes link in bgp summary
+	    ** show bgp neighbor export routes link in bgp summary
+	* added new possible value when hiding something: "restricted value" (see new version of bird.lg.config.php in arhive for more details)
+	* ASN link to whois service
+	* some security fixes
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * CHANGELOG
+	4. edit your bird.lg.config.php:
+	    4.1. Add to "Global" section:
+		$config['asn_url']="https://apps.db.ripe.net/search/lookup.html?source=ripe&key=AS%ASNUMBER%&type=AUT_NUM";
+	    4.2. Add to "Bird output" section:
+		$config['output']['hide']['bgp_accepted_routes_link']=false;
+		$config['output']['hide']['bgp_best_routes_link']=false;
+		$config['output']['hide']['bgp_export_routes_link']=false;
+
+===========
 21.12.2013
 ===========
     Version 0.3.0 is released.
@@ -21,7 +51,7 @@
 		    $config['query']['bgp_summ']=array();
 		    $config['query']['bgp_summ']['name']="BGP summary";
 		    $config['query']['bgp_summ']['additional_empty']=true;
-		    $config['query']['bgp_summ']['restricted']=false;
+		    $config['query']['bgp_summ']['restricted']=true;
 		    $config['query']['bgp_summ']['addon']="";
 	    4.2. Add to "Bird output" section:
 		    $config['output']['hide']['bgp_peer_det_link']=false;

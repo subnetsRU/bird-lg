@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.0
+    BIRD Looking Glass :: Version: 0.3.1
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -135,38 +135,156 @@ if (!isset($param['query'])&&!$param['query']){
 	    printf("%s",main_form($config));
 	}elseif ($query=="bgp_det"){
 	    print $back_but;
-	    if (!$param['protocol']){$param['protocol']="IPv4";}
-	    if ($param['peer']&&$param['router']){
-		$param['cmd']="show protocols";
-		$result=bird_send_cmd($param,$config);
-		//deb($result);
-		if ($result['error']){
-		    printf("%s",$result['error']);
-		}else{
-		    $tmp=explode("\n",$result['data']);
-		    foreach ($tmp as $k => $v){
-			if (preg_match("/^([a-zA-Z0-9\_]+)\s+BGP\s+/",$v,$m)){
-			    if (md5($m[1])==$param['peer']){
-				$peer=$m[1];
-			    }
-			}
+	    if (config_val($config['output'],"hide","bgp_peer_det_link")){
+		printf("%s",error("Command execution is not permitted"));
+	    }else{
+		$restricted=0;
+		if (isset($config['query']['bgp_summ']['restricted'])){
+		    if (restricted($config['restricted'],$config['query']['bgp_summ']['restricted'])){
+			$restricted=1;
 		    }
-		    if ($peer){
-			$param['peer']=$peer;
-			$param['full_info']=true;
-			$result=bgp_neighbor_details($param,$config);
-			//deb($result);
+		}
+		if ($restricted){
+		    printf("%s",error("Command execution is not permitted"));
+		}else{
+		    if ($param['peer']&&$param['router']){
+			$result=bgp_peer_search($param,$config);
 			if ($result['error']){
 			    printf("%s",$result['error']);
 			}else{
-			    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"protocols",$config));
+			    if ($result['data']){
+				$param['peer']=$result['data'];
+				$param['full_info']=true;
+				unset($result);
+				$result=bgp_neighbor_details($param,$config);
+				//deb($result);
+				if ($result['error']){
+				    printf("%s",$result['error']);
+				}else{
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"protocols",$config));
+				}
+			    }else{
+				printf("%s",error("Peer not found"));
+			    }
 			}
 		    }else{
-			printf("%s",error("Peer not found"));
+			printf("%s",error("Params is missing"));
 		    }
 		}
+	    }
+	}elseif ($query=="nei_route_accepted"){
+	    print $back_but;
+	    if (config_val($config['output'],"hide","bgp_accepted_routes_link")){
+		printf("%s",error("Command execution is not permitted"));
 	    }else{
-		printf("%s",error("Params is missing"));
+		$restricted=0;
+		if (isset($config['query']['bgp_summ']['restricted'])){
+		    if (restricted($config['restricted'],$config['query']['bgp_summ']['restricted'])){
+			$restricted=1;
+		    }
+		}
+		if ($restricted){
+		    printf("%s",error("Command execution is not permitted"));
+		}else{
+		    if ($param['peer']&&$param['router']){
+			$result=bgp_peer_search($param,$config);
+			if ($result['error']){
+			    printf("%s",$result['error']);
+			}else{
+			    if ($result['data']){
+				$param['peer']=$result['data'];
+				unset($result);
+				$result=process_query($param,$config);
+				//deb($result);
+				if ($result['error']){
+				    printf("%s",$result['error']);
+				}else{
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				}
+			    }else{
+				printf("%s",error("Peer not found"));
+			    }
+			}
+		    }else{
+			printf("%s",error("Params is missing"));
+		    }
+		}
+	    }
+	}elseif ($query=="nei_route_best"){
+	    print $back_but;
+	    if (config_val($config['output'],"hide","bgp_best_routes_link")){
+		printf("%s",error("Command execution is not permitted"));
+	    }else{
+		$restricted=0;
+		if (isset($config['query']['bgp_summ']['restricted'])){
+		    if (restricted($config['restricted'],$config['query']['bgp_summ']['restricted'])){
+			$restricted=1;
+		    }
+		}
+		if ($restricted){
+		    printf("%s",error("Command execution is not permitted"));
+		}else{
+		    if ($param['peer']&&$param['router']){
+			$result=bgp_peer_search($param,$config);
+			if ($result['error']){
+			    printf("%s",$result['error']);
+			}else{
+			    if ($result['data']){
+				$param['peer']=$result['data'];
+				unset($result);
+				$result=process_query($param,$config);
+				//deb($result);
+				if ($result['error']){
+				    printf("%s",$result['error']);
+				}else{
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				}
+			    }else{
+				printf("%s",error("Peer not found"));
+			    }
+			}
+		    }else{
+			printf("%s",error("Params is missing"));
+		    }
+		}
+	    }
+	}elseif ($query=="nei_route_export"){
+	    print $back_but;
+	    if (config_val($config['output'],"hide","bgp_export_routes_link")){
+		printf("%s",error("Command execution is not permitted"));
+	    }else{
+		$restricted=0;
+		if (isset($config['query']['bgp_summ']['restricted'])){
+		    if (restricted($config['restricted'],$config['query']['bgp_summ']['restricted'])){
+			$restricted=1;
+		    }
+		}
+		if ($restricted){
+		    printf("%s",error("Command execution is not permitted"));
+		}else{
+		    if ($param['peer']&&$param['router']){
+			$result=bgp_peer_search($param,$config);
+			if ($result['error']){
+			    printf("%s",$result['error']);
+			}else{
+			    if ($result['data']){
+				$param['peer']=$result['data'];
+				unset($result);
+				$result=process_query($param,$config);
+				//deb($result);
+				if ($result['error']){
+				    printf("%s",$result['error']);
+				}else{
+				    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],"route",$config));
+				}
+			    }else{
+				printf("%s",error("Peer not found"));
+			    }
+			}
+		    }else{
+			printf("%s",error("Params is missing"));
+		    }
+		}
 	    }
 	}else{
 	    print $back_but;
@@ -179,11 +297,21 @@ if (!isset($param['query'])&&!$param['query']){
 		    if ($chk['error']){
 			print $chk['error'];
 		    }else{
-			$result=process_query($param,$config);
-			if ($result['error']){
-			    printf("%s",$result['error']);
+			$restricted=0;
+			if (isset($config['query'][$query]['restricted'])){
+			    if (restricted($config['restricted'],$config['query'][$query]['restricted'])){
+				$restricted=1;
+			    }
+			}
+			if ($restricted){
+			    printf("%s",error("Command execution is not permitted"));
 			}else{
-			    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],$query,$config));
+			    $result=process_query($param,$config);
+			    if ($result['error']){
+				printf("%s",$result['error']);
+			    }else{
+				printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],$query,$config));
+			    }
 			}
 		    }
 		}else{

@@ -22,6 +22,7 @@ $config=array();
 */
 $config['timezone']="Europe/Moscow";
 $config['php_path']="/usr/local/bin/php";
+$config['asn_url']="https://apps.db.ripe.net/search/lookup.html?source=ripe&key=AS%ASNUMBER%&type=AUT_NUM";
 
 /*
     BIRD sockets
@@ -228,6 +229,14 @@ $config['nodes'][$hin]['description'] = 'BIRD on localhost';
 	* protocol - don`t display bird`s protocol names in route output, default is false
 	* iface - don`t display interface names in route output, default is false
 	* bgp_peer_det_link - don`t display bgp peer detail link (ex. in bgp summary output), default is false
+	* bgp_accepted_routes_link - don`t display link for accepted routes in bgp summary output, default is false
+	* bgp_best_routes_link - don`t display link for best routes in bgp summary output, default is false
+	* bgp_export_routes_link - don`t display link for export routes in bgp summary output, default is false
+	
+	possible values: true, false, restricted:
+	    * true: deny for all
+	    * false: permit for all
+	    * restricted: permit only for IP`s in restricted list
 */
 $config['output']=array();
 
@@ -240,6 +249,9 @@ $config['output']['hide']=array();
 $config['output']['hide']['protocol']=false;
 $config['output']['hide']['iface']=false;
 $config['output']['hide']['bgp_peer_det_link']=false;
+$config['output']['hide']['bgp_accepted_routes_link']=false;
+$config['output']['hide']['bgp_best_routes_link']=false;
+$config['output']['hide']['bgp_export_routes_link']=false;
 
 /*
     Communities list

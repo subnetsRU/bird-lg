@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.3.0
+    BIRD Looking Glass :: Version: 0.3.1
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -29,7 +29,7 @@ required_for_run();
 
 session_start();
 date_default_timezone_set($config['timezone']);
-define('LG_VERSION',"0.3.0");
+define('LG_VERSION',"0.3.1");
 
 function head($title="LG"){
         printf ("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
@@ -131,23 +131,6 @@ function query_list($config,$sp=array()){
  return $ret;
 }
 
-function restricted($ips,$restricted){
-    $ret=1;
-    if ($restricted){
-	if (is_array($ips)){
-	    foreach ($ips as $ip){
-		if ($ip==REMOTE_ADDR){
-		    $ret=0;
-		    break;
-		}
-	    }
-	}
-    }else{
-	$ret=0;
-    }
- return $ret;
-}
-
 function error($txt){
     $ret=sprintf("<span class=\"error_text\">[ERROR]: %s</span>",$txt);;
  return $ret;
@@ -241,7 +224,7 @@ function check_form_params($p=array(),$config=array()){
 	    return $ret;
 	}
 
-	if (!config_val($config['query'][$p['query']],"additional_empty")){
+	if (!config_val($config['query'],$p['query'],"additional_empty")){
 	    if (!isset($p['additional'])){
 		$ret['error']=error("You must enter Additional parameters");
 		return $ret;
@@ -300,7 +283,13 @@ function process_query($p=array(),$config=array()){
     if ($p['query']){
 	$p['cmd']="";
 	$addon="";
-
+	
+	if (isset($config['query'][$p['query']]['restricted'])){
+	    if (restricted($config['restricted'],$config['query'][$p['query']]['restricted']?1:0)){
+		$ret['error']=sprintf("%s",error("Command execution is not permitted"));
+		return $ret;
+	    }
+	}
 	if ( $p['query']=="route" || $p['query']=="ping" || $p['query']=="trace" ){
 	    if ($p['protocol']=="IPv4"){
 		$check_ip=check_ip_input($p);
@@ -365,7 +354,20 @@ function process_query($p=array(),$config=array()){
 	    $p['additional']="";
 	    $p['cmd']="show protocols";
 	    $p['fake_cmd']="bgp summary";
+	}elseif ($p['query']=="nei_route_accepted"){
+	    $p['additional']="";
+	    $p['cmd']=sprintf("show route protocol %s all",$p['peer']);
+	    $p['fake_cmd']=sprintf("show %s routes",$p['nei']);
+	}elseif ($p['query']=="nei_route_best"){
+	    $p['additional']="";
+	    $p['cmd']=sprintf("show route protocol %s primary all",$p['peer']);
+	    $p['fake_cmd']=sprintf("show %s routes best",$p['nei']);
+	}elseif ($p['query']=="nei_route_export"){
+	    $p['additional']="";
+	    $p['cmd']=sprintf("show route export %s all",$p['peer']);
+	    $p['fake_cmd']=sprintf("show %s export routes",$p['nei']);
 	}
+	
 	
 	$p['router_name']=sprintf("%s %s",$config['nodes'][$p['router']]['name'],$config['nodes'][$p['router']]['description']?sprintf(" (%s)",$config['nodes'][$p['router']]['description']):"");
 	printf("<b>Router: %s</b><BR>",$p['router_name']);
@@ -408,7 +410,7 @@ function bgp_summ($p=array(),$config=array()){
 	    //deb($bgp_peers);
 	    $total_peers=count($bgp_peers);
 	    if ($total_peers>0){
-		$hide_protocol=config_val($config['output']['hide'],"protocol");
+		$hide_protocol=config_val($config['output'],"hide","protocol");
 		$data=sprintf("<b>Total number of BGP neighbors: %d</b>\n",$total_peers);
 		$data.="BGP neighbors Up: %TOTAL_UP% <font color=\"red\">Down:  %TOTAL_DOWN%</font>\n";
 		$data.="<b>Number of unique ASN: %TOTAL_UNIQ%</b>\n";
@@ -424,7 +426,8 @@ function bgp_summ($p=array(),$config=array()){
 		$data.="<th class=\"head\">ASN</th>";
 		$data.="<th class=\"head\">Date</th>";
 		$data.="<th class=\"head\">State</th>";
-		$data.="<th class=\"head\">Accepted/Best</th>";
+		$data.="<th class=\"head\">Accepted / Best</th>";
+		$data.="<th class=\"head\">Exported</th>";
 		//$data.="<th class=\"head\">ErrCode</th>\n";
 		$data.="</tr>\n";
 		$data.="<tr>\n";
@@ -450,16 +453,37 @@ function bgp_summ($p=array(),$config=array()){
 		    if ($neighbor['error']){
 			$data.=sprintf("<td colspan=6><font color=\"darkred\"><i>can`t get neighbor%s info</i></font></td>\n",$hide_protocol?"":sprintf(" <b>%s</b>",$peer['name']));
 		    }else{
-			if (config_val($config['output']['hide'],"bgp_peer_det_link")){
+			if (config_val($config['output'],"hide","bgp_peer_det_link")){
 			    $data.=sprintf("<td>%s</td>",$nei['addr']);
 			}else{
 			    $data.=sprintf("<td><a style=\"cursor: pointer;\" onclick=\"det('query=bgp_det&router=%s&protocol=%s&peer=%s');\"><u>%s</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr']);
 			}
-			$data.=sprintf("<td align=\"center\">%s</td>",$nei['asn']);
+			if (isset($config['asn_url'])&&$config['asn_url']){
+			    $data.=sprintf("<td align=\"center\"><a href=\"%s\" target=\"_blank\">%s</td>",preg_replace("/%ASNUMBER%/",$nei['asn'],$config['asn_url']),$nei['asn']);
+			}else{
+			    $data.=sprintf("<td align=\"center\">%s</td>",$nei['asn']);
+			}
 			$data.=sprintf("<td align=\"center\">%s</td>",$peer['date']);
 			$data.=sprintf("<td align=\"center\">%s</td>",$nei['state']);
 			if ($state_up){
-			    $data.=sprintf("<td>%s/%s</td>",$nei['accepted'],$nei['best']);
+			    $data.="<td align=\"center\">";
+			    if (config_val($config['output'],"hide","bgp_accepted_routes_link")){
+				$data.=sprintf("%s",$nei['accepted']);
+			    }else{
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['accepted']);
+			    }
+			    $data.="&nbsp;/&nbsp;";
+			    if (config_val($config['output'],"hide","bgp_best_routes_link")){
+				$data.=sprintf("%s",$nei['best']);
+			    }else{
+				$data.=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['best']);
+			    }
+			    $data.="</td>";
+			    if (config_val($config['output'],"hide","bgp_export_routes_link")){
+				$data.=sprintf("<td align=\"center\">%s</td>",$nei['exported']);
+			    }else{
+				$data.=sprintf("<td align=\"center\"><a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s');\"><u>%d</u></a></td>",$p['router'],$p['protocol'],md5($peer['name']),$nei['addr'],$nei['exported']);
+			    }
 			}else{
 			    $data.="<td>&nbsp;</td>";
 			}
@@ -499,11 +523,8 @@ function bgp_neighbor_details($p=array(),$config=array()){
     if ($show['error']){
 	$ret['error']=$show['error'];
     }else{
-	if ($p['full_info']){
-	    return $show;
-	}else{
-	    $tmp=explode("\n",$show['data']);
-	    if (count($tmp)>0){
+	$tmp=explode("\n",$show['data']);
+	if (count($tmp)>0){
 		//deb($tmp);
 		foreach ($tmp as $k => $v){
 		    if ($v){
@@ -516,10 +537,28 @@ function bgp_neighbor_details($p=array(),$config=array()){
 			}elseif (preg_match("/^Routes:\s+(\d+)\s+imported,\s+(\d+)\s+exported,\s+(\d+)\s+preferred$/",$v,$m)){
 			    $ret['data']['accepted']=trim($m[1]);
 			    $ret['data']['best']=trim($m[3]);
+			    $ret['data']['exported']=trim($m[2]);
 			}
 		    }
 		}
+	}
+	
+	if ($p['full_info']){
+	    if (preg_match("/Routes:\s+\d+\s+imported,\s+\d+\s+exported,\s+\d+\s+preferred/",$show['data'])){
+		if (!config_val($config['output'],"hide","bgp_accepted_routes_link")){
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_accepted&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['accepted']);
+		    $show['data']=preg_replace("/\d+\simported/",sprintf("%s imported",$lnk),$show['data']);
+		}
+		if (!config_val($config['output'],"hide","bgp_best_routes_link")){
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_best&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['best']);
+		    $show['data']=preg_replace("/\d+\spreferred/",sprintf("%s preferred",$lnk),$show['data']);
+		}
+		if (!config_val($config['output'],"hide","bgp_export_routes_link")){
+		    $lnk=sprintf("<a style=\"cursor: pointer;\" onclick=\"det('query=nei_route_export&router=%s&protocol=%s&peer=%s&nei=%s');\"><u><b>%d</b></u></a>",$p['router'],$p['protocol'],md5($p['peer']),$ret['data']['addr'],$ret['data']['exported']);
+		    $show['data']=preg_replace("/\d+\sexported/",sprintf("%s exported",$lnk),$show['data']);
+		}
 	    }
+	    return $show;
 	}
     }
  return $ret;
@@ -673,28 +712,30 @@ function parse_bird_data($data,$query,$config){
 	if (is_array($config)){
 	    $data_str=explode("\n",$data);
 	    //deb($data_str);
-	    if ($query=="export"){
-		$tot_paths=1;
-	    }else{
-		$tot_paths=intval(substr_count($data,"via "));
-		$tot_paths+=intval(substr_count($data,"dev "));
-		$tot_paths+=intval(substr_count($data,"blackhole "));
-	    }
+	    $tot_paths=intval(substr_count($data,"via "));
+	    $tot_paths+=intval(substr_count($data,"dev "));
+	    $tot_paths+=intval(substr_count($data,"blackhole "));
+	    $ret=sprintf("Total routes: %d\n",$tot_paths);
 	    foreach ($data_str as $k => $str){
-		if (config_val($config['output']['hide'],"protocol")){
+		if (config_val($config['output'],"hide","protocol")){
 		    if (preg_match("/\s\[[a-zA-Z0-9\_]+\s\S+\]\s/",$str)){
 			$str=preg_replace("/\s\[[a-zA-Z0-9\_]+\s(\S+)\]\s/"," [\$1] ",$str);
+		    }elseif (preg_match("/\s\[[a-zA-Z0-9\_]+\s\S+\s+from\s+\S+\]\s/",$str)){
+			$str=preg_replace("/\s\[[a-zA-Z0-9\_]+\s(\S+\s+from\s+\S+)\]\s/"," [\$1\$2] ",$str);
 		    }
 		}
-		if (config_val($config['output']['hide'],"iface")){
+		if (config_val($config['output'],"hide","iface")){
 		    if (preg_match("/\son\s\S+\s\[/",$str)){
 			$str=preg_replace("/\son\s\S+\s/"," ",$str);
 		    }
+		    if (preg_match("/dev\s[a-zA-Z]+\d{0,5}\s+\[/",$str)){
+			$str=preg_replace("/dev\s[a-zA-Z]+\d{0,5}\s+\[/","via <i>hidden</i> [",$str);
+		    }
 		}
-		if (config_val($config['output']['modify'],"routes")){
+		if (config_val($config['output'],"modify","routes")){
 		    $str=trim($str);
-		    $str=preg_replace("/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(\/\d{1,3}){0,1}\s+/",sprintf("\nRouting table entry for <b>\$1\$2</b>\nPaths available: %d\n",$tot_paths),$str);
-		    $str=preg_replace("/^([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+/",sprintf("\nRouting table entry for <b>\$1\$2</b>\nPaths available: %d\n",$tot_paths),$str);
+		    $str=preg_replace("/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(\/\d{1,3}){0,1}\s+/","\nRouting table entry for <b>\$1\$2</b>\n",$str);
+		    $str=preg_replace("/^([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+/","\nRouting table entry for <b>\$1\$2</b>\n",$str);
 		    $str=preg_replace("/(via|dev|blackhole)\s(.*)\s\*\s(.*)$/","<font color=red>\$1 \$2 \$3 <b>best</b></font>",$str);
 		    $str=preg_replace("/via\s/","\nvia ",$str);
 		    $str=preg_replace("/dev\s/","\nvia ",$str);
@@ -709,10 +750,10 @@ function parse_bird_data($data,$query,$config){
 		    }
 		}
 
-		if ( config_val($config['output']['modify'],"own_community") || config_val($config['output']['modify'],"routes") ){
+		if ( config_val($config['output'],"modify","own_community") || config_val($config['output'],"modify","routes") ){
 		    if (preg_match("/community:/i",$str)){
 			$str=preg_replace("/\((\d{1,5}),(\d{1,5})\)/","\$1:\$2",$str);
-			if (config_val($config['output']['modify'],"own_community")){
+			if (config_val($config['output'],"modify","own_community")){
 			    if (is_array($config['own_community'])){
 				$comm_str=explode(" ",$str);
 				array_shift($comm_str);
@@ -743,15 +784,15 @@ function parse_bird_data($data,$query,$config){
 	}
 	$tmp=explode("\n",$data);
 	foreach ($tmp as $str){
-		if (config_val($config['output']['modify'],"protocols")){
+		if (config_val($config['output'],"modify","protocols")){
 		    if (preg_match(sprintf("/\s+%s\s+/i",$protos),$str)){
 			if (preg_match("/^\S+\s+\S+\s+\S+\s+(down)/",$str)){
-			    if (config_val($config['output']['hide'],"protocol")){
+			    if (config_val($config['output'],"hide","protocol")){
 				$str=preg_replace("/^[a-zA-Z0-9\_]+\s/","<i>hidden</i>",$str);
 			    }
 			    $ret.=preg_replace("/^(.*)$/","\n<b><font size=\"+1\" color=\"red\">\$1</font></b>",$str);
 			}else{
-			    if (config_val($config['output']['hide'],"protocol")){
+			    if (config_val($config['output'],"hide","protocol")){
 				$str=preg_replace("/^[a-zA-Z0-9\_]+\s/","<i>hidden</i>",$str);
 			    }
 			    $ret.=preg_replace("/^(.*)/","\n<font size=\"+1\"><b>\$1</b></font>",$str);
@@ -766,12 +807,94 @@ function parse_bird_data($data,$query,$config){
  return $ret;
 }
 
-function config_val($config,$val){
-    $ret=0;
-    if (isset($config[$val])){
-	if ($config[$val]){
-	    $ret=1;
+function bgp_peer_search($p=array(),$config=array()){
+    $ret=array();
+    $ret['error']="";
+    $ret['data']="";
+    $peer="";
+    if (!$p['protocol']){$p['protocol']="IPv4";}
+
+    if ($p['peer']&&$p['router']){
+	$p['cmd']="show protocols";
+	$result=bird_send_cmd($p,$config);
+	//deb($result);
+	if ($result['error']){
+		$ret['error']=sprintf("%s",$result['error']);
+	}else{
+		$tmp=explode("\n",$result['data']);
+		foreach ($tmp as $k => $v){
+			if (preg_match("/^([a-zA-Z0-9\_]+)\s+BGP\s+/",$v,$m)){
+			    if (md5($m[1])==$p['peer']){
+				$peer=$m[1];
+			    }
+			}
+		}
 	}
+    }else{
+	$ret['error']=sprintf("%s",error("Can`t find protocol, params is missing"));
+    }
+
+    if ($peer){
+	$ret['data']=$peer;
+    }else{
+	$ret['error']=sprintf("%s",error("Peer not found"));
+    }
+ return $ret;
+}
+
+function config_val($config,$key,$val){
+    //default
+    if ($key=="hide"){
+	$ret=1;
+    }else{
+	$ret=0;
+    }
+    //
+
+    if (isset($config[$key][$val])){
+	if (is_bool($config[$key][$val])){
+	    if ($key=="hide"){
+		if ($config[$key][$val]===false){
+		    $ret=0;
+		}
+	    }else{
+		if ($config[$key][$val]===true){
+		    $ret=1;
+		}
+	    }
+	}else{
+	    if ($config[$key][$val]=="restricted"){
+		$restricted=restricted("",1);
+		if ($restricted==0){
+		    if ($key=="hide"){
+			$ret=0;
+		    }else{
+			$ret=1;
+		    }
+		}
+	    }
+	}
+    }
+ return $ret;
+}
+
+function restricted($ips,$restricted){
+    $ret=1;
+    if ($restricted){
+	if (!is_array($ips)){
+	    global $config;
+	    $ips=$config['restricted'];
+	}
+	if (is_array($ips)){
+	    foreach ($ips as $ip){
+		if ($ip==REMOTE_ADDR){
+		    $ret=0;
+		    break;
+		}
+	    }
+	}
+    }else{
+	$ret=0;
     }
  return $ret;
 }
