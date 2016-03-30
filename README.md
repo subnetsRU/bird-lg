@@ -2,9 +2,9 @@
 -----------------------------------
 
 #### About
-This is a LG for the Internet Routing Daemon [Bird] (http://bird.network.cz/)
+This is a LG for the Internet Routing Daemon [Bird] (http://bird.network.cz/).
 
-LG written on [PHP] (http://php.net/)
+LG written on [PHP] (http://php.net/).
 
 There are two parts in LG:
 * Web interface
