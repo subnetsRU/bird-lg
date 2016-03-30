@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.1.0
+    BIRD Looking Glass :: Version: 0.2.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -29,7 +29,7 @@ required_for_run();
 
 session_start();
 date_default_timezone_set($config['timezone']);
-define('LG_VERSION',"0.1.0");
+define('LG_VERSION',"0.2.0");
 
 function head($title="LG"){
         printf ("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
@@ -62,7 +62,7 @@ function logging($config,$txt=""){
 		if (@is_writable($config['log_query_file'])){
 		    $logfile = @fopen($config['log_query_file'], 'a');
 		    if (@is_resource($logfile)){
-		        @fputs($logfile,sprintf("[%s]: %s\n",date("Y-m-d H:i:s"),$_SERVER['REMOTE_ADDR']));
+		        @fputs($logfile,sprintf("[%s]: %s\n",date("Y-m-d H:i:s"),REMOTE_ADDR));
 		        if (is_array($txt)){
 			    if (count($txt)>0){
 				foreach ($txt as $k => $v){
@@ -117,7 +117,7 @@ function query_list($config,$sp=array()){
 	if (count($query)>0){
 	    foreach ($query as $name => $val ){
 		if (count($val)>0){
-		    if (!restricted($config['restricted'],$val['restricted'])){
+		    if (!restricted($config['restricted'],isset($val['restricted'])?$val['restricted']:"")){
 			$ret['data'][]=sprintf("<input type=\"radio\" id=\"query\" name=\"query\" value=\"%s\"%s>%s",$name,isset($sp['query'])&&$sp['query']==$name?" checked":"",$val['name']);
 		    }
 		}
@@ -136,7 +136,7 @@ function restricted($ips,$restricted){
     if ($restricted){
 	if (is_array($ips)){
 	    foreach ($ips as $ip){
-		if ($ip==$_SERVER['REMOTE_ADDR']){
+		if ($ip==REMOTE_ADDR){
 		    $ret=0;
 		    break;
 		}
@@ -236,27 +236,45 @@ function check_form_params($p=array(),$config=array()){
 	    $p['protocol']="IPv4";
 	}
 
-	if (!isset($p['additional'])){
-	    $ret['error']=error("You must enter Additional parameters");
-	    return $ret;
-	}
 	if (!isset($p['protocol'])){
 	    $ret['error']=error("Unknown protocol");
 	    return $ret;
 	}
-	if ($p['protocol']=="IPv4"){
-	    if (!preg_match("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,3}){0,1}$/",$p['additional'])){
-		$ret['error']=error(sprintf("Additional %s parameters are wrong: %s",$p['protocol'],$p['additional']));
+
+	if (!config_val($config['query'][$p['query']],"additional_empty")){
+	    if (!isset($p['additional'])){
+		$ret['error']=error("You must enter Additional parameters");
 		return $ret;
 	    }
-	}elseif($p['protocol']=="IPv6"){
-	    if (!preg_match("/^((([0-9a-fA-F]{1,4}\:){1,7}\:)|((([0-9a-fA-F]{1,4}\:){1,7})|(([0-9a-fA-F]{1,4}\:){1,6}\:)[0-9a-fA-F]{1,4})(\/\d{1,3}){0,1})$/",$p['additional'],$tmp)){
-		$ret['error']=error(sprintf("Additional %s parameters are wrong: %s",$p['protocol'],$p['additional']));
+	    if (!$p['additional']){
+		$ret['error']=error("Additional parameters are empty");
 		return $ret;
 	    }
+
 	}
     }else{
 	$ret['error']=sprintf("%s",error("No params in request"));
+    }
+ return $ret;
+}
+
+function check_ip_input($p){
+    $ret=array();
+    $ret['error']="";
+    if (is_array($p)){
+	if ($p['protocol']=="IPv4"){
+		if (!preg_match("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,3}){0,1}$/",$p['additional'])){
+		    $ret['error']=error(sprintf("Additional %s parameters are wrong: %s",$p['protocol'],$p['additional']));
+		}
+	}elseif($p['protocol']=="IPv6"){
+		//$regexp="/^((([0-9a-fA-F]{1,4}\:){1,7}\:)|((([0-9a-fA-F]{1,4}\:){1,7})|(([0-9a-fA-F]{1,4}\:){1,6}\:)[0-9a-fA-F]{1,4})(\/\d{1,3}){0,1})$/";
+		$regexp="/^[0-9a-fA-F:]+(\/\d{1,3}){0,1}$/";
+		if (!preg_match($regexp,$p['additional'],$tmp)){
+		    $ret['error']=error(sprintf("Additional %s parameters are wrong: %s",$p['protocol'],$p['additional']));
+		}
+	}
+    }else{
+	$ret['error']=error("Can`t check IP or NET");
     }
  return $ret;
 }
@@ -282,6 +300,23 @@ function bird_send_cmd($p=array(),$config=array()){
     if ($p['query']){
 	$cmd="";
 	$addon="";
+
+	if ( $p['query']=="route" || $p['query']=="ping" || $p['query']=="trace" ){
+	    if ($p['protocol']=="IPv4"){
+		$check_ip=check_ip_input($p);
+		if ($check_ip['error']){
+		    $ret['error']=$check_ip['error'];
+		    return $ret;
+		}
+	    }elseif($p['protocol']=="IPv6"){
+		$check_ip=check_ip_input($p);
+		if ($check_ip['error']){
+		    $ret['error']=$check_ip['error'];
+		    return $ret;
+		}
+	    }
+	}
+
 	if (isset($config['query'][$p['query']]['addon'])){
 	    if ($config['query'][$p['query']]['addon']){
 		$addon=sprintf(" %s",$config['query'][$p['query']]['addon']);
@@ -293,17 +328,39 @@ function bird_send_cmd($p=array(),$config=array()){
 	    }else{
 		    $cmd=sprintf("show route for %s%s",$p['additional'],$addon);
 	    }
-	}elseif ($p['query']=="ping"||$p['query']=="trace"){
+	}elseif ( $p['query']=="ping" || $p['query']=="trace" ){
+	    if (($p['protocol']=="IPv4"&&$p['additional']=="0.0.0.0") || ($p['protocol']=="IPv6"&&$p['additional']=="::/0")){
+		$ret['error']=error(sprintf("You must enter host, not default gateway: %s",$p['additional']));
+		return $ret;
+	    }
 	    if (preg_match("/\/\d{1,3}$/",$p['additional'])){
 		$ret['error']=error(sprintf("You must enter single host in additional parameters, network is given: %s",$p['additional']));
 		return $ret;
-	    }else{
-		if ($p['query']=="ping"){
-		    $cmd=sprintf("ping%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
-		}elseif($p['query']=="trace"){
-		    $cmd=sprintf("trace%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
+	    }
+	    if ($p['query']=="ping"){
+	        $cmd=sprintf("ping%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
+	    }elseif($p['query']=="trace"){
+	        $cmd=sprintf("trace%s %s",$p['protocol']=="IPv6"?6:"",$p['additional']);
+	    }
+	}elseif ($p['query']=="protocols"){
+	    if ($p['additional']){
+		if (!preg_match("/^[a-zA-Z0-9\_\s]+$/",$p['additional'])){
+		    $ret['error']=error(sprintf("Check protocol name in additional parameters: %s",$p['additional']));
+		    return $ret;
 		}
 	    }
+	    $cmd=sprintf("show protocols %s%s",$p['additional'],$addon);
+	}elseif ($p['query']=="export"){
+	    if ($p['additional']){
+		if (!preg_match("/^[a-zA-Z0-9\_\s]+$/",$p['additional'])){
+		    $ret['error']=error(sprintf("Check protocol name in additional parameters: %s",$p['additional']));
+		    return $ret;
+		}
+	    }else{
+		$ret['error']=error("You must enter protocol name in additional parameters");
+		return $ret;
+	    }
+	    $cmd=sprintf("show route export %s%s",$p['additional'],$addon);
 	}
 
 	$router_name=sprintf("%s %s",$config['nodes'][$p['router']]['name'],$config['nodes'][$p['router']]['description']?sprintf(" (%s)",$config['nodes'][$p['router']]['description']):"");
@@ -343,7 +400,11 @@ function connect_2_bird($p,$config){
     $ret=array();
     $ret['error']="";
     $ret['data']="";
-    
+
+    if (!is_array($config)){
+	$ret['error']=sprintf("%s",error("Config is missing"));
+	return $ret;
+    }
     $router=$config['nodes'][$p['router']];
 
     if ($router['host']=="socket"){
@@ -389,6 +450,7 @@ function connect_2_bird($p,$config){
     if ($router['host']=="socket"){
 	    @exec(sprintf("%s %s/%s -c %s",$config['php_path'],$config['bird_client_dir'],$config['bird_client_file'],$p['cmd']),$out,$res);
 	    if (is_array($out)){
+		//deb($out);
 		foreach ($out as $k => $v){
 		    $ret['data'].=sprintf("%s\n",$v);
 		}
@@ -407,18 +469,17 @@ function connect_2_bird($p,$config){
 	
 	$fp = @stream_socket_client(sprintf("tcp://%s:%d",$router['host'],$router['port']), $errno, $errstr, 10, STREAM_CLIENT_CONNECT);
 	if ($fp){
-	    //@stream_set_timeout ($fp,10);
-	    $data='';
+	    $data="";
 	    @fwrite($fp, sprintf("%s;\r\n\r\n",$p['cmd']));
 	    while (!@feof($fp)) {
 		$tmp=sprintf("%s",@fgets($fp, 1024));
-		$tmp=preg_replace("/^\r\n/","",$tmp);
 		if ($tmp){
 		    $data.=$tmp;
 		}
 	    }
 	    @fclose($fp);
 	    if (strlen($data)>0){
+		//deb($data);
 		$ret['data']=$data;
 	    }else{
 		$ret['error']=error("No data recieved");
@@ -430,6 +491,125 @@ function connect_2_bird($p,$config){
  return $ret;
 }
 
+function parse_bird_data($data,$query,$config){
+    $ret=$data;
+    if ($query=="route" || $query=="export"){
+	$ret="";
+	$replaces=array(
+	    "BGP.origin"=>"Origin",
+	    "BGP.as_path"=>"AS-PATH",
+	    "BGP.next_hop"=>"Next-hop",
+	    "BGP.local_pref"=>"Local preference",
+	    "BGP.atomic_aggr"=>"Atomic aggregate",
+	    "BGP.aggregator:"=>"Aggregated by",
+	    "BGP.community"=>"Community",
+	    "BGP.med"=>"MED",
+	    "OSPF.metric1"=>"Metric1",
+	    "OSPF.metric2"=>"Metric2",
+	    "OSPF.tag"=>"Tag",
+	    "OSPF.router_id"=>"Router ID",
+	);
+
+	if (is_array($config)){
+	    $data_str=explode("\n",$data);
+	    //deb($data_str);
+	    if ($query=="export"){
+		$tot_paths=1;
+	    }else{
+		$tot_paths=intval(substr_count($data,"via "));
+		$tot_paths+=intval(substr_count($data,"dev "));
+		$tot_paths+=intval(substr_count($data,"blackhole "));
+	    }
+	    foreach ($data_str as $k => $str){
+		if (config_val($config['output']['hide'],"protocol")){
+		    if (preg_match("/\s\[[a-zA-Z0-9\_]+\s\S+\]\s/",$str)){
+			$str=preg_replace("/\s\[[a-zA-Z0-9\_]+\s(\S+)\]\s/"," [\$1] ",$str);
+		    }
+		}
+		if (config_val($config['output']['hide'],"iface")){
+		    if (preg_match("/\son\s\S+\s\[/",$str)){
+			$str=preg_replace("/\son\s\S+\s/"," ",$str);
+		    }
+		}
+		if (config_val($config['output']['modify'],"routes")){
+		    $str=trim($str);
+		    $str=preg_replace("/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(\/\d{1,3}){0,1}\s+/",sprintf("\nRouting table entry for <b>\$1\$2</b>\nPaths available: %d\n",$tot_paths),$str);
+		    $str=preg_replace("/^([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+/",sprintf("\nRouting table entry for <b>\$1\$2</b>\nPaths available: %d\n",$tot_paths),$str);
+		    $str=preg_replace("/(via|dev|blackhole)\s(.*)\s\*\s(.*)$/","<font color=red>\$1 \$2 \$3 <b>best</b></font>",$str);
+		    $str=preg_replace("/via\s/","\nvia ",$str);
+		    $str=preg_replace("/dev\s/","\nvia ",$str);
+		    $str=preg_replace("/blackhole\s/","\nblackhole ",$str);
+		    $str=preg_replace("/Type:\s+/","\tType: ",$str);
+		    $str=preg_replace("/^(BGP.as_path:)$/","\$1 <i>empty</i>",$str);
+		    $str=preg_replace("/^(BGP.atomic_aggr:)$/","\$1 <i>empty</i>",$str);
+		    if(is_array($replaces)){
+			foreach ($replaces as $what=>$to){
+			    $str=preg_replace(sprintf("/%s/",$what),sprintf("\t%s",$to),$str);
+			}
+		    }
+		}
+
+		if ( config_val($config['output']['modify'],"own_community") || config_val($config['output']['modify'],"routes") ){
+		    if (preg_match("/community:/i",$str)){
+			$str=preg_replace("/\((\d{1,5}),(\d{1,5})\)/","\$1:\$2",$str);
+			if (config_val($config['output']['modify'],"own_community")){
+			    if (is_array($config['own_community'])){
+				$comm_str=explode(" ",$str);
+				array_shift($comm_str);
+				foreach ($comm_str as $comm){
+				    $comm_tmp=explode(":",$comm);
+				    if ($comm_tmp[0]==$config['asn']){
+					if (isset($config['own_community'][$comm_tmp[1]])){
+					    $str=preg_replace(sprintf("/(%s)/",$comm),sprintf("\$1 <font size=\"-2\"><i>(%s)</i></font>",$config['own_community'][$comm_tmp[1]]),$str);
+					}
+				    }
+				}
+			    }
+			}
+		    }
+		}
+		$ret.=sprintf("%s\n",$str);
+	    }
+	}
+    }elseif ($query=="protocols"){
+	if (config_val($config['output']['modify'],"protocols")){
+	    $ret="";
+	    $proto=array("Direct","Kernel","Device","Static","Pipe","BGP","OSPF","RIP","RAdv","bfd");
+
+	    if (is_array($proto)){
+		if (count($proto)==1){
+		    $protos=$proto[0];
+		}else{
+		    $protos=sprintf("(%s)",implode("|",$proto));
+		}
+	    }
+	    $tmp=explode("\n",$data);
+	    foreach ($tmp as $str){
+		if (preg_match(sprintf("/\s+%s\s+/i",$protos),$str)){
+		    if (preg_match("/^\S+\s+\S+\s+\S+\s+(down)/",$str)){
+			$ret.=preg_replace("/^(.*)$/","\n<b><font size=\"+1\" color=\"red\">\$1</font></b>",$str);
+		    }else{
+			$ret.=preg_replace("/^(.*)/","\n<font size=\"+1\"><b>\$1</b></font>",$str);
+		    }
+		    $ret.="\n";
+		}else{
+		    $ret.=sprintf("%s\n",trim($str));
+		}
+	    }
+	}
+    }
+ return $ret;
+}
+
+function config_val($config,$val){
+    $ret=0;
+    if (isset($config[$val])){
+	if ($config[$val]){
+	    $ret=1;
+	}
+    }
+ return $ret;
+}
 
 function check_lg_version($check_version="0"){
     $ret=array();
@@ -492,8 +672,8 @@ function required_for_run(){
 	}
     }
 
-    if (!is_array($_SERVER) || !count($_SERVER)){
-	print "[ERROR]: \$_SERVER not avail";
+    if (!REMOTE_ADDR){
+	print "[ERROR]: REMOTE_ADDR addrees is unknown, check config";
 	exit(0);
     }
 }

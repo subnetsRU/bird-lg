@@ -80,6 +80,10 @@ $config['trace6_util']['flags']="-m 20 -q 1 -I";
 //========================================================================================
 //				    WEB INTERFACE SECTION
 //========================================================================================
+define('REMOTE_ADDR',$_SERVER['REMOTE_ADDR']);			//Remote client IP-address, used for restricted commands
+// comment out previous string and UNcomment this define if you use NGINX as proxy for APACHE
+// don`t forget to add "proxy_set_header    X-Real-IP        $remote_addr;" to nginx.conf
+//define('REMOTE_ADDR',$_SERVER['HTTP_X_REAL_IP']);
 
 /*
     Main
@@ -117,26 +121,49 @@ $config['ipv6_enabled']=false;
     Query types
     ============
     This query types is served by LG
-    If "restricted" is set to "false", then anyone can see this query type in the web-iface.
-    If "restricted" is set to "true", then only permitted IPs can see this query type in the web-iface.
+    Format:
+	$config['query']['QUERY_NAME'][PARAMS]
+    PARAMS:
+	* name - name of the query in web-interface
+	* restricted - If "restricted" is set to "false", then anyone can see this query type in the web-iface. If "restricted" is set to "true", then only permitted IPs can see this query type in the web-iface.
+	* additional_empty - permit empty additional parameters if they really don`t needed
+	* addon - add this string to the end of the command before send it to bird.client
 */
 $config['query']=array();
 
 $config['query']['route']=array();
 $config['query']['route']['name']="Show route";
+$config['query']['route']['additional_empty']=false;
 $config['query']['route']['restricted']=false;
-$config['query']['route']['addon']="all";	//add this string to the end of the command before send it to bird.client
+$config['query']['route']['addon']="all";
 
 $config['query']['ping']=array();
 $config['query']['ping']['name']="Ping IP";
+$config['query']['ping']['additional_empty']=false;
 $config['query']['ping']['restricted']=false;
+$config['query']['ping']['addon']="";
 
 $config['query']['trace']=array();
 $config['query']['trace']['name']="Trace IP";
+$config['query']['trace']['additional_empty']=false;
 $config['query']['trace']['restricted']=false;
+$config['query']['trace']['addon']="";
+
+$config['query']['protocols']=array();
+$config['query']['protocols']['name']="Show protocols";
+$config['query']['protocols']['additional_empty']=true;
+$config['query']['protocols']['restricted']=true;
+$config['query']['protocols']['addon']="";
+
+$config['query']['export']=array();
+$config['query']['export']['name']="Advertised routes";
+$config['query']['export']['additional_empty']=false;
+$config['query']['export']['restricted']=true;
+$config['query']['export']['addon']="all";
 
 /*
     Permit restricted commands for IPs
+    ===================================
     If "restricted" is set to "true" in any query type - here you can set list of permitted IPs for seeing this query type in the web-iface.
     If no IPs is specified then nobody can see "restricted" query types.
     You can set as many IPs as you want:
@@ -183,6 +210,41 @@ $config['nodes'][$hin]['host'] = 'socket';
 $config['nodes'][$hin]['port'] = '';
 $config['nodes'][$hin]['name'] = 'Localhost';
 $config['nodes'][$hin]['description'] = 'BIRD on localhost';
+
+/*
+    Bird output
+    ===================
+    modify: 
+	* routes - modify bird`s standart route output to our custom format output, default is false
+	* protocols  - modify bird`s standart protocols output our custom format output, default is false
+	* own_community - if community is in the own communities list (difined below) than also print community meaning, default is false
+    hide:
+	* protocol - don`t display bird`s protocol names in route output, default is false
+	* iface - don`t display interface names in route output, default is false
+*/
+$config['output']=array();
+
+$config['output']['modify']=array();
+$config['output']['modify']['routes']=false;
+$config['output']['modify']['protocols']=false;
+$config['output']['modify']['own_community']=false;
+
+$config['output']['hide']=array();
+$config['output']['hide']['protocol']=false;
+$config['output']['hide']['iface']=false;
+
+/*
+    Communities list
+    =================
+    List of communities for explanation. Used if "explain_own_community" is set to true.
+    Format:
+	$config['community'][COMMUNITY]="community meaning text";
+    Examples:
+	$config['own_community'][666]="blackhole";
+	$config['own_community'][999]="internal route";
+*/
+$config['own_community']=array();
+$config['own_community'][666]="blackhole";
 
 /*
     End of configuration file

@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.1.0
+    BIRD Looking Glass :: Version: 0.2.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -176,38 +176,38 @@ if (count($error)==0){
 	    }
 	}
     }else{
-	    $sock = @stream_socket_client(sprintf('unix:///%s',$socket_path), $errno, $errstr, 30,STREAM_CLIENT_CONNECT);
-	    if ($sock&&$errno==0){
+	$sock = @stream_socket_client(sprintf('unix:///%s',$socket_path), $errno, $errstr, 30,STREAM_CLIENT_CONNECT);
+	if ($sock&&$errno==0){
 		@fwrite($sock, $command."\r\n");
 		$nn=0;
 		while (($buf = @fgets($sock, 4096)) !== false) {
-		    $buffer=trim($buf);
-		    //printf ("%d: %s\n",$nn,$buffer);
+		    $buffer=trim($buf, "\t\r\0\x0B" );
 		    if (($nn==0&&!preg_match("/^0001\sBIRD\s(\S+)\sready\./",$buffer))){
 			$error[]="Welcome string unknown";
 			break;
 		    }
-		if ($config['suppress_welcome']){
-		    if (preg_match("/^0001\sBIRD\s(\S+)\sready\./",$buffer)){
-			$buffer="";
+		    if ($config['suppress_welcome']){
+			if (preg_match("/^0001\sBIRD\s(\S+)\sready\./",$buffer)){
+			    $buffer="";
+			}
 		    }
-		}
-
-		$code=substr($buffer,0,4);
-		if ($buffer){
-		    if (preg_match("/^[0-9]{4}(-){0,1}/",$buffer,$tmp)){
-			$buffer=substr($buffer,sprintf("%d",isset($tmp[1])?5:4));
-		    }
+		    $code=substr($buffer,0,4);
 		    if ($buffer){
-			$bird_data.=sprintf("%s\n",$buffer);
+			if (preg_match("/^[0-9]{4}(-){0,1}/",$buffer,$tmp)){
+			    $buffer=substr($buffer,sprintf("%d",isset($tmp[1])?5:4));
+			}
+			if ($buffer){
+			    $bird_data.=sprintf("%s",$buffer);
+			}
+			if (array_key_exists($code,$bird_end_codes)){
+			    break;
+			}
 		    }
-		    if (array_key_exists($code,$bird_end_codes)){
-			break;
-		    }
+		    $nn++;
 		}
-		$nn++;
-	    }
-	    @fclose($sock);
+		$bird_data = preg_replace( "/ *\n */m", "\n", $bird_data );
+		$bird_data = preg_replace( "/\n+$/", "", $bird_data );
+		@fclose($sock);
 	}else{
 	    $error[]=sprintf("Socket connection error %s (%s)",$errno,$errstr);
 	}
@@ -244,7 +244,6 @@ function ping($config,$command,$protocol="ipv4"){
     if ($protocol=="ipv6"){
 	$ping_util=isset($config['ping6_util']['path'])?$config['ping6_util']['path']:"";
 	$ping_util_flags=isset($config['ping6_util']['flags'])?$config['ping6_util']['flags']:"";
-	/*$regex = '/(((?=(?>.*?(::))(?!.+\3)))\3?|([\dA-F]{1,4}(\3|:(?!$)|$)|\2))(?4){5}((?4){2}|(25[0-5]|(2[0-4]|1\d|[1-9])?\d)(\.(?7)){3})\z/i';*/
 	if (preg_match("/\s((([0-9a-fA-F]{1,4}\:){1,7}\:)|((([0-9a-fA-F]{1,4}\:){1,7})|(([0-9a-fA-F]{1,4}\:){1,6}\:)[0-9a-fA-F]{1,4}))[\S\s]{0,}$/",$command,$tmp)){
 	    $host=$tmp[0];
 	}

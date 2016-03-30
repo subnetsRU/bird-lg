@@ -1,6 +1,6 @@
 <?
 /*
-    BIRD Looking Glass :: Version: 0.1.0
+    BIRD Looking Glass :: Version: 0.2.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013 SUBNETS.RU project (Moscow, Russia)
@@ -15,8 +15,8 @@ if (!@include $func){
 }
 
 $param=$_POST;
-if (!isset($param['query'])){$param['query']="";}
-if (!$param['query']){
+
+if (!isset($param['query'])&&!$param['query']){
     head();
     print "<script>";
     print "function request(act){\n";
@@ -45,11 +45,7 @@ if (!$param['query']){
 	    }else{
 		err+='<li>Select Node</li>';
 	    }
-	    if ($('additional').value){
-		tmp+='&additional='+$('additional').value;
-	    }else{
-		err+='<li>Additional is empty</li>';
-	    }";
+	    tmp+='&additional='+$('additional').value;";
 	    if ($config['ipv6_enabled']){
 		print "tmp+='&protocol='+$('protocol').value;";
 	    }
@@ -143,7 +139,7 @@ if (!$param['query']){
 			if ($result['error']){
 			    printf("%s",$result['error']);
 			}else{
-			    printf("<div class=\"result\">%s</div>",$result['data']);
+			    printf("<div class=\"result\">%s</div>",parse_bird_data($result['data'],$query,$config));
 			}
 		    }
 		}else{

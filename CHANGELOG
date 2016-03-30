@@ -1,4 +1,37 @@
 ===========
+03.12.2013
+===========
+    Version 0.2.0 is released.
+    
+    What`s new:
+	* add new commands:
+	    ** show protocols
+	    ** show protocols all
+	    ** show route export
+	* add new abilities to web interface
+	* bug fixes
+    
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * bird.client.php
+	    * CHANGELOG
+	    * README
+	4. copy favicon.ico in your LG install directory
+	5. edit your bird.lg.config.php (see new version of bird.lg.config.php in arhive for more details):
+	    5.1. add the following new sections:
+		* section "Bird output"
+		* section "Communities list"
+	    5.2. Add new "Query types":
+		* protocols
+		* export
+	    5.3. add "additional_empty" param to all previous "Query types"
+	    5.4. add define string of 'REMOTE_ADDR' in WEB INTERFACE SECTION
+
+===========
 28.11.2013
 ===========
     Version 0.1.0 is released.
