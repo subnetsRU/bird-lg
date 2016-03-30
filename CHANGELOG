@@ -1,4 +1,50 @@
 ===========
+09.09.2014
+===========
+    Version 0.4.0 is released.
+
+    What`s new:
+	* add new abilities to web-interface
+	    ** BFD protocol support
+	    ** OSPF protocol support
+	* add "disable" flag in configuration for every type of query
+	* clear value of additional field when click on another type of query
+
+    Upgrade instructions:
+	1. download archive with new version
+	2. unpack archive
+	3. get (from archive with new version) and replace these files in your LG install directory:
+	    * func.php
+	    * index.php
+	    * CHANGELOG
+	    * README
+	    * css/style.css
+	4. edit your bird.lg.config.php:
+	    4.1. Add to "Main" section:
+		$config['clear_additional']=false;
+	    4.2. Add to "Query types" section:
+		$config['query']['bfd_sessions']=array();
+		$config['query']['bfd_sessions']['name']="BFD sessions";
+		$config['query']['bfd_sessions']['disabled']=false;
+		$config['query']['bfd_sessions']['additional_empty']=true;
+		$config['query']['bfd_sessions']['restricted']=true;
+		$config['query']['bfd_sessions']['addon']="";
+		$config['query']['bfd_sessions']['placeholder']="leave empty or IP-address";
+
+		$config['query']['ospf_summ']=array();
+		$config['query']['ospf_summ']['name']="OSPF neighbors";
+		$config['query']['ospf_summ']['disabled']=false;
+		$config['query']['ospf_summ']['additional_empty']=true;
+		$config['query']['ospf_summ']['restricted']=true;
+		$config['query']['ospf_summ']['addon']="";
+		$config['query']['ospf_summ']['placeholder']="leave empty or Router ID";
+	    4.3. Also you can add two new params to the old queries (replace QUERY_NAME to the real name of the query):
+		$config['query']['QUERY_NAME']['disabled']=false;
+		$config['query']['QUERY_NAME']['placeholder']="YOUR TEXT";
+
+	>> See current bird.lg.config.php file for more info about new params and values.
+
+===========
 05.09.2014
 ===========
     Version 0.3.3 is released.
@@ -137,4 +183,3 @@
 28.11.2013
 ===========
     Version 0.1.0 is released.
-

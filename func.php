@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.3.3
+    BIRD Looking Glass :: Version: 0.4.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -10,7 +10,7 @@
 */
 
 ////////////////////// Functions file ////////////////////////////
-define('LG_VERSION',"0.3.3");
+define('LG_VERSION',"0.4.0");
 session_start();
 date_default_timezone_set($config['timezone']);
 error_reporting(E_ALL);
@@ -121,8 +121,22 @@ function query_list($config,$sp=array()){
 	if (count($query)>0){
 	    foreach ($query as $name => $val ){
 		if (count($val)>0){
-		    if (!restricted($config['restricted'],isset($val['restricted'])?$val['restricted']:"")){
-			$ret['data'][]=sprintf("<input type=\"radio\" id=\"query\" name=\"query\" value=\"%s\"%s>%s",$name,isset($sp['query'])&&$sp['query']==$name?" checked":"",$val['name']);
+		    $enabled=1;
+		    if (isset($val['disabled'])){
+			if( config_val($config['query'],$name,"disabled") ){
+			    $enabled=0;
+			}
+		    }
+		    if ($enabled){
+			if (!restricted($config['restricted'],isset($val['restricted'])?$val['restricted']:"")){
+			    $placeholder="";
+			    if (isset($val['placeholder'])){
+				if ($val['placeholder']){
+				    $placeholder=$val['placeholder'];
+				}
+			    }
+			    $ret['data'][]=sprintf("<input type=\"radio\" id=\"query\" name=\"query\" onclick=\"additional('%s');\" value=\"%s\"%s>%s",$placeholder,$name,isset($sp['query'])&&$sp['query']==$name?" checked":"",$val['name']);
+			}
 		    }
 		}
 	    }
@@ -146,7 +160,7 @@ function main_form($config){
 	$sp=$_SESSION['param'];
     }
 
-    print "<CENTER>
+    print "<div id=\"main_form\" align=\"center\">
 	<TABLE BORDER=0 class=\"tbl\"><TR><TD>
 	<TABLE BORDER=0 CELLPADDING=2 CELLSPACING=2>
 	<TR>
@@ -156,17 +170,21 @@ function main_form($config){
 	</TR>
 	<TR><TD>
 	<TABLE BORDER=0 CELLPADDING=2 CELLSPACING=2>";
+
     $query_list=query_list($config,$sp);
     if ($query_list['error']){
-	print $query_list['error'];
+	printf("<span class=\"errorMsg\">ERROR: %s</span>",$query_list['error']);
     }else{
 	if (is_array($query_list['data'])){
 	    foreach ($query_list['data'] as $query){
 		printf("<tr><td>%s</td></tr>",$query);
 	    }
+	}else{
+	    $query_list['data']=array();
 	}
     }
-    if ($config['ipv6_enabled']){
+
+    if ($config['ipv6_enabled'] && !$query_list['error'] && count($query_list['data']) > 0 ){
 	if (!isset($sp['protocol'])){$sp['protocol']="IPv4";}
 	printf("<TR>
 		    <TD>
@@ -177,28 +195,44 @@ function main_form($config){
 		    </TD>
 	    </TR>",$sp['protocol']=="IPv4"?" selected":"",$sp['protocol']=="IPv6"?" selected":"");
     }
+    
+    if (!$query_list['error'] && count($query_list['data']) == 0 ){
+	print "<tr>
+		<td><font color=\"red\"><i>empty, check LG config file</i></font></td>
+	</tr>";
+    }
     print "</TABLE>";
     print "</TD>";
-    printf("<TD ALIGN=\"CENTER\">&nbsp;<BR><INPUT NAME=\"additional\" ID=\"additional\" SIZE=\"30\" VALUE=\"%s\"><BR><FONT SIZE=\"-1\">&nbsp;<SUP>&nbsp;</SUP>&nbsp;</FONT></TD>",isset($sp['additional'])?$sp['additional']:"");
+    print "<TD ALIGN=\"CENTER\">&nbsp;<BR>";
+    if (!$query_list['error'] && count($query_list['data']) > 0 ){
+	printf("<INPUT NAME=\"additional\" ID=\"additional\" SIZE=\"40\" VALUE=\"%s\"><BR>
+	    <FONT SIZE=\"-1\">&nbsp;<SUP>&nbsp;</SUP>&nbsp;</FONT></TD>",isset($sp['additional'])?$sp['additional']:"");
+    }
     print "<TD ALIGN=\"RIGHT\">&nbsp;<BR>";
 
     $routers_list=routers_list($config,$sp);
     if ($routers_list['error']){
-	print $routers_list['error'];
+	printf("<span class=\"errorMsg\">ERROR: %s</span>",$routers_list['error']);
     }else{
-	print "<SELECT ID=\"router\" NAME=\"router\">";
-	print $routers_list['data'];
-	print "</SELECT>";
+	if (!$query_list['error'] && count($query_list['data']) > 0 ){
+	    print "<SELECT ID=\"router\" NAME=\"router\">";
+	    print $routers_list['data'];
+	    print "</SELECT>";
+	}else{
+	    print "&nbsp;";
+	}
     }
     print "<BR>";
     print "<FONT SIZE=\"-1\">&nbsp;&nbsp;<SUP>&nbsp;</SUP>&nbsp;</FONT></TD>";
     print "</TR>";
     print "<TR>";
-    print "<TD ALIGN=\"CENTER\" COLSPAN=3><button class=\"but\" onclick=\"request('1');\">Send request</button></TD>";
+    if ( !$query_list['error'] && !$routers_list['error'] && count($query_list['data']) > 0 ){
+	print "<TD ALIGN=\"CENTER\" COLSPAN=3><button class=\"but\" onclick=\"request('1');\">Send request</button></TD>";
+    }
     print "</TR>";
     print "</TABLE>";
     print "</TD></TR></TABLE>";
-    print "</CENTER>";
+    print "</div>";
 }
 
 function check_form_params($p=array(),$config=array()){
@@ -267,6 +301,7 @@ function check_ip_input($p){
 }
 
 function process_query($p=array(),$config=array()){
+    //deb($p);
     $ret=array();
     $ret['error']="";
     $put_2_log=array();
@@ -374,12 +409,15 @@ function process_query($p=array(),$config=array()){
 	    $p['additional']="";
 	    $p['cmd']=sprintf("show route export %s all",$p['peer']);
 	    $p['fake_cmd']=sprintf("show %s export routes",$p['nei']);
+	}elseif ($p['query']=="bfd_sessions"){
+	    $p['cmd']="show bfd sessions";
+	}elseif ($p['query']=="ospf_summ"){
+	    $p['cmd']="show ospf neighbors";
 	}
-	
 	
 	$p['router_name']=sprintf("%s %s",$config['nodes'][$p['router']]['name'],$config['nodes'][$p['router']]['description']?sprintf(" (%s)",$config['nodes'][$p['router']]['description']):"");
 	printf("<b>Router: %s</b><BR>",$p['router_name']);
-	printf("<b>Command: %s</b><BR>",isset($p['fake_cmd'])?$p['fake_cmd']:$p['cmd']);
+	printf("<b>Command: %s</b><BR>",isset($p['fake_cmd'])&&$p['fake_cmd']?$p['fake_cmd']:$p['cmd']);
 	print "<br>";
 	if ($p['query']=="bgp_summ"){
 	    $ret=bgp_summ($p,$config);
@@ -591,7 +629,7 @@ function bird_send_cmd($p=array(),$config=array()){
     $ret=array();
     $ret['error']="";
     $put_2_log=array();
-	if ($p['cmd']){
+    if ($p['cmd']){
 	    $p['cmd']=sprintf("%s: %s",strtolower($p['protocol']),$p['cmd']);
 	    $conn=connect_2_bird($p,$config);
 	    if ($conn['error']){
@@ -603,18 +641,18 @@ function bird_send_cmd($p=array(),$config=array()){
 		    $ret['data']=$conn['data'];
 		}
 	    }
-	}else{
+    }else{
 	    $ret['error']=sprintf("%s",error("Can`t get command"));
-	}
+    }
 	
-	if (isset($config['log_query'])&&$config['log_query']){
+    if (isset($config['log_query'])&&$config['log_query']){
 	    $put_2_log[]=sprintf("Router: %s",$p['router_name']);
 	    $put_2_log[]=sprintf("Command: %s",$p['cmd']);
 	    if (isset($config['log_query_result'])&&$config['log_query_result']){
 		$put_2_log[]=sprintf("Result:\n%s",$ret['error']?$ret['error']:$ret['data']);
 	    }
 	    logging($config,$put_2_log);
-	}
+    }
  return $ret;
 }
 
@@ -826,6 +864,84 @@ function parse_bird_data($data,$query,$config,$p){
 		    }
 		}
 	}
+    }elseif ($query=="bfd_sessions"){
+	$ret="<pre>$data</pre>";
+	$hide_iface=config_val($config['output'],"hide","iface");
+	$hide_proto=config_val($config['output'],"hide","protocol");
+	$additional="";
+	if (isset($p['additional'])){
+	    if ($p['additional']){
+		$additional=trim($p['additional']);
+	    }
+	}
+
+	if ($hide_iface || $hide_proto || $additional){
+	    $ret="<pre>";
+	    $tmp=explode("\n",$data);
+	    foreach ($tmp as $str){
+		if ($hide_proto){
+		    if (preg_match("/^\S+:$/",$str)){
+			$str="";
+		    }
+		}
+		if ($hide_iface){
+		    $str=preg_replace("/Interface/","",$str);
+		    if (preg_match("/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\S+\s/",$str)){
+			$str=preg_replace("/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+)(\S+)\s/","\$1",$str);
+		    }elseif(preg_match("/([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+\S+\s/",$str)){
+			$str=preg_replace("/(([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+)(\S+)\s/","\$1",$str);
+		    }
+		}
+		
+		if ($additional){
+		    if (preg_match("/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+\S+\s/",$str,$m)){
+			if ($m[1] != $additional){
+			    $str="";
+			}
+		    }elseif(preg_match("/([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+\S+\s/",$str,$m)){
+			if ($m[1] != $additional){
+			    $str="";
+			}
+		    }
+		}
+
+		if ($str){
+		    $ret.=sprintf("%s\n",trim($str));
+		}
+	    }
+	    $ret.="<pre>";
+	}
+    }elseif($query=="ospf_summ"){
+	$ret="<pre>$data</pre>";
+	$additional="";
+	if (isset($p['additional'])){
+	    if ($p['additional']){
+		$additional=trim($p['additional']);
+	    }
+	}
+
+	if ($additional){
+	    $ret="<pre>";
+	    $tmp=explode("\n",$data);
+	    foreach ($tmp as $str){
+		if ($additional){
+		    if (preg_match("/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+/",$str,$m)){
+			if ($m[1] != $additional){
+			    $str="";
+			}
+		    }elseif(preg_match("/([0-9a-fA-F:]+)(\/\d{1,3}){0,1}\s+/",$str,$m)){
+			if ($m[1] != $additional){
+			    $str="";
+			}
+		    }
+		}
+
+		if ($str){
+		    $ret.=sprintf("%s\n",trim($str));
+		}
+	    }
+	    $ret .= "<pre>";
+	}
     }
  return $ret;
 }
@@ -865,7 +981,7 @@ function bgp_peer_search($p=array(),$config=array()){
  return $ret;
 }
 
-function config_val($config,$key,$val){
+function config_val($config,$key,$val=""){
     //default
     if ($key=="hide"){
 	$ret=1;
@@ -873,27 +989,39 @@ function config_val($config,$key,$val){
 	$ret=0;
     }
     //
-
-    if (isset($config[$key][$val])){
-	if (is_bool($config[$key][$val])){
-	    if ($key=="hide"){
-		if ($config[$key][$val]===false){
-		    $ret=0;
-		}
-	    }else{
-		if ($config[$key][$val]===true){
-		    $ret=1;
-		}
-	    }
-	}else{
-	    if ($config[$key][$val]=="restricted"){
-		$restricted=restricted("",1);
-		if ($restricted==0){
-		    if ($key=="hide"){
+    
+    if ($val){
+	if (isset($config[$key][$val])){
+	    if (is_bool($config[$key][$val])){
+		if ($key=="hide"){
+		    if ($config[$key][$val]===false){
 			$ret=0;
-		    }else{
+		    }
+		}else{
+		    if ($config[$key][$val]===true){
 			$ret=1;
 		    }
+		}
+	    }else{
+		if ($config[$key][$val]=="restricted"){
+		    $restricted=restricted("",1);
+		    if ($restricted==0){
+			if ($key=="hide"){
+			    $ret=0;
+			}else{
+			    $ret=1;
+			}
+		    }
+		}
+	    }
+	}
+    }else{
+	if (isset($config[$key])){
+	    if (is_bool($config[$key])){
+		if ($config[$key]===true){
+		    $ret=1;
+		}elseif ($config[$key]===false){
+		    $ret=0;
 		}
 	    }
 	}

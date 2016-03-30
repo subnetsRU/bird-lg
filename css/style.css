@@ -67,3 +67,9 @@ th.head {
     font-weight: bold;
     color: darkred;
 }
+
+.errorMsg {
+    color: red;
+    font-style: italic;
+    font-weight: bold;
+}

@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.3.3
+    BIRD Looking Glass :: Version: 0.4.0
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -78,6 +78,13 @@ if (!$param['query']){
 	    $('errors').empty();
 	    $('errors').innerHTML='Errors:<ul>Query was empty</ul>';
 	}
+    }\n";
+    print "function additional(val){";
+	if (config_val($config,"clear_additional")){
+	    print "$('additional').value='';";
+	}
+    print "
+	$('additional').placeholder=val;
     }\n";
 
     if (isset($config['check_new_version'])){
@@ -384,7 +391,9 @@ if (!$param['query']){
 	    
 	    show_buttons($buttons,1);
 	}else{
-	    //print "<BR><BR>";
+	    //deb($query);
+	    //deb($param);
+	    //deb($config['query']);
 	    if (is_array($config['query'])){
 		if (isset($config['query'][$query])){
 		    if (!isset($param['protocol'])){
@@ -414,8 +423,6 @@ if (!$param['query']){
 		    show_buttons($buttons,1);
 		}else{
 		    printf("%s",error("Unknown query type"));
-		    //deb($query);
-		    //deb($config['query']);
 		}
 	    }else{
 		printf("%s",error("Config error: no query types"));

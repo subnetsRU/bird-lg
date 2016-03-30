@@ -1,4 +1,4 @@
-		    README v0.3
+		    README v0.4
 		*******************
 
  Looking Glass (LG) for the Internet Routing Daemon "BIRD" 
@@ -115,28 +115,39 @@ A few words about bird.client.php
 ++++++++++++++++++++++++++++++++++
  It can be run separately from web-interface from CLI of your server. It gets commands on input and execute them.
  Usage: php bird.client.php -c [ipv4|ipv6]: <command>
- For now bird.client.php suport these commands:
-    * bird.client.php -c ipv4: show route for X.X.X.X
-    * bird.client.php -c ipv4: show route X.X.X.X/Y
-    * bird.client.php -c ipv4: show protocols
-    * bird.client.php -c ipv4: show protocols all
-    * bird.client.php -c ipv4: show route protocol PROTOCOL_NAME all
-    * bird.client.php -c ipv4: show route protocol PROTOCOL_NAME filtered all
-    * bird.client.php -c ipv4: show route export PROTOCOL_NAME
-    * bird.client.php -c ipv4: ping X.X.X.X
-    * bird.client.php -c ipv4: trace X.X.X.X
+ For now bird.client.php support these commands:
 
-    * bird.client.php -c ipv6: show route for 200X:XXXX::XXXX
-    * bird.client.php -c ipv6: show route 200X:XXXX::XXXX/XXX
-    * bird.client.php -c ipv6: show protocols
-    * bird.client.php -c ipv6: show protocols all
-    * bird.client.php -c ipv6: show route protocol PROTOCOL_NAME all
-    * bird.client.php -c ipv4: show route protocol PROTOCOL_NAME filtered all
-    * bird.client.php -c ipv6: show route export PROTOCOL_NAME
-    * bird.client.php -c ipv6: ping6 200X:XXXX::XXXX
-    * bird.client.php -c ipv6: trace6 200X:XXXX::XXXX
+    IPv4
+    ++++
+	* bird.client.php -c ipv4: show route for X.X.X.X
+	* bird.client.php -c ipv4: show route X.X.X.X/Y
+	* bird.client.php -c ipv4: show protocols
+	* bird.client.php -c ipv4: show protocols all
+	* bird.client.php -c ipv4: show route protocol <PROTOCOL_NAME> all
+	* bird.client.php -c ipv4: show route protocol <PROTOCOL_NAME> filtered all
+	* bird.client.php -c ipv4: show route export <PROTOCOL_NAME>
+	* bird.client.php -c ipv4: ping X.X.X.X
+	* bird.client.php -c ipv4: trace X.X.X.X
+	* bird.client.php -c ipv4: show bfd sessions
+	* bird.client.php -c ipv4: show ospf neighbors
 
- So it can run on remote host with the support of TCP-based server. 
+    IPv6
+    ++++
+	* bird.client.php -c ipv6: show route for 200X:XXXX::XXXX
+	* bird.client.php -c ipv6: show route 200X:XXXX::XXXX/XXX
+	* bird.client.php -c ipv6: show protocols
+	* bird.client.php -c ipv6: show protocols all
+	* bird.client.php -c ipv6: show route protocol <PROTOCOL_NAME> all
+	* bird.client.php -c ipv4: show route protocol <PROTOCOL_NAME> filtered all
+	* bird.client.php -c ipv6: show route export <PROTOCOL_NAME>
+	* bird.client.php -c ipv6: ping6 200X:XXXX::XXXX
+	* bird.client.php -c ipv6: trace6 200X:XXXX::XXXX
+	* bird.client.php -c ipv6: show bfd sessions
+	* bird.client.php -c ipv6: show ospf neighbors
+
+    >Where "<PROTOCOL_NAME>" is name of the protocol, see "show protocols" command for details.
+
+ So bird.client.php can be run on remote host with the support of TCP-based server. 
  Example of the TCP-based server http://cr.yp.to/ucspi-tcp.html (/usr/ports/sysutils/ucspi-tcp/pkg-descr).
  Working scheme: ucspi received command from WEB-iface, transmits a command to php script (ex. bird.server.php), php script execute bird.client.php
  I don`t attach bird.server.php - this you homework ;)
@@ -146,7 +157,7 @@ A few words about bird.client.php
 ================================================================================================================================
 Requirements
 +++++++++++++
-    1. Installed and run BIRD daemon (IPv4/IPv6 or both)
+    1. Installed and running BIRD daemon (IPv4 and/or IPv6)
     2. Installed PHP5 - CLI version and Apache module or CGI version
 
 Installing
@@ -174,10 +185,10 @@ Notes
     TESTED
 ================================================================================================================================
 Only tested on:
-    * OS: FreeBSD, versions: 8.3, 8.4, 9.1
-    * BIRD versions: 1.3.11, 1.4.0
+    * OS: FreeBSD versions: 8.3, 8.4, 9.1
+    * BIRD versions: 1.3.11, 1.4.0, 1.4.4
     * PHP: version 5.4.21
-    * HTTP: Apache 2.2.25
+    * HTTP: Apache 2.2
 
 ================================================================================================================================
     SUPPORT
@@ -191,6 +202,7 @@ You can request for support or report bug:
 It necessarily should be attached:
     * your OS version: uname -a
     * your PHP version: php -v
+    * query log (if exists)
     * a detailed description of your question
 Otherwise your request goes to /dev/null.
 

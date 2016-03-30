@@ -7,8 +7,7 @@ This is a looking glass for the Internet Routing Daemon "Bird" --> http://bird.n
 LG written on PHP: http://php.net/
 
 LG is split in two parts:
-<li>
-* Web interface
+<li>Web interface
 * Client for communicate with BIRD socket
 
-Please see file ABOUT for details.
+**Please see file ABOUT for details.**

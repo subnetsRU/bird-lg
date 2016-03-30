@@ -98,7 +98,9 @@ define('REMOTE_ADDR',$_SERVER['REMOTE_ADDR']);			//Remote client IP-address, use
     log_query: log LG requests to log file, default is false.
     log_query_result: log LG request result to log file, default is false
     log_query_file: full path to the log file, default is empty
+    clear_additional: clear additional parameters value when click on query type, default is false
 */
+
 $config['logo']="img/logo.png";
 $config['logo_url']="http://www.subnets.ru";
 $config['company_name']="SUBNETS.RU";
@@ -110,6 +112,7 @@ $config['check_new_version']=true;
 $config['log_query']=false;
 $config['log_query_result']=false;
 $config['log_query_file']="";
+$config['clear_additional']=true;
 
 /*
     IPv6
@@ -126,47 +129,77 @@ $config['ipv6_enabled']=false;
 	$config['query']['QUERY_NAME'][PARAMS]
     PARAMS:
 	* name - name of the query in web-interface
+	* disabled - disable (remove from index page) or not this type of query, default is false
 	* restricted - If "restricted" is set to "false", then anyone can see this query type in the web-iface. If "restricted" is set to "true", then only permitted IPs can see this query type in the web-iface.
 	* additional_empty - permit empty additional parameters if they really don`t needed
 	* addon - add this string to the end of the command before send it to bird.client
+	* placeholder - HTML placeholder tag for "additional parameters" field
 */
 $config['query']=array();
 
 $config['query']['route']=array();
 $config['query']['route']['name']="Show route";
+$config['query']['route']['disabled']=false;
 $config['query']['route']['additional_empty']=false;
 $config['query']['route']['restricted']=false;
 $config['query']['route']['addon']="all";
+$config['query']['route']['placeholder']="enter IP-address or subnet";
 
 $config['query']['ping']=array();
 $config['query']['ping']['name']="Ping IP";
+$config['query']['ping']['disabled']=false;
 $config['query']['ping']['additional_empty']=false;
 $config['query']['ping']['restricted']=false;
 $config['query']['ping']['addon']="";
+$config['query']['ping']['placeholder']="enter IP-address";
 
 $config['query']['trace']=array();
 $config['query']['trace']['name']="Trace IP";
+$config['query']['trace']['disabled']=false;
 $config['query']['trace']['additional_empty']=false;
 $config['query']['trace']['restricted']=false;
 $config['query']['trace']['addon']="";
+$config['query']['trace']['placeholder']="enter IP-address";
 
 $config['query']['protocols']=array();
 $config['query']['protocols']['name']="Show protocols";
+$config['query']['protocols']['disabled']=false;
 $config['query']['protocols']['additional_empty']=true;
 $config['query']['protocols']['restricted']=false;
 $config['query']['protocols']['addon']="";
+$config['query']['protocols']['placeholder']="leave empty or all or protocol name";
 
 $config['query']['bgp_summ']=array();
 $config['query']['bgp_summ']['name']="BGP summary";
+$config['query']['bgp_summ']['disabled']=false;
 $config['query']['bgp_summ']['additional_empty']=true;
 $config['query']['bgp_summ']['restricted']=false;
 $config['query']['bgp_summ']['addon']="";
+$config['query']['bgp_summ']['placeholder']="leave this field empty";
 
 $config['query']['export']=array();
 $config['query']['export']['name']="Advertised routes";
+$config['query']['export']['disabled']=false;
 $config['query']['export']['additional_empty']=false;
 $config['query']['export']['restricted']=false;
 $config['query']['export']['addon']="all";
+$config['query']['export']['placeholder']="leave empty or protocol name";
+
+$config['query']['bfd_sessions']=array();
+$config['query']['bfd_sessions']['name']="BFD sessions";
+$config['query']['bfd_sessions']['disabled']=false;
+$config['query']['bfd_sessions']['additional_empty']=true;
+$config['query']['bfd_sessions']['restricted']=true;
+$config['query']['bfd_sessions']['addon']="";
+$config['query']['bfd_sessions']['placeholder']="leave empty or IP-address";
+
+$config['query']['ospf_summ']=array();
+$config['query']['ospf_summ']['name']="OSPF neighbors";
+$config['query']['ospf_summ']['disabled']=false;
+$config['query']['ospf_summ']['additional_empty']=true;
+$config['query']['ospf_summ']['restricted']=true;
+$config['query']['ospf_summ']['addon']="";
+$config['query']['ospf_summ']['placeholder']="leave empty or Router ID";
 
 /*
     Permit restricted commands for IPs
@@ -256,7 +289,7 @@ $config['output']['hide']['bgp_export_routes_link']=false;
 $config['output']['hide']['bgp_filtered_routes_link']=false;
 
 /*
-    Communities list
+    BGP communities list
     =================
     List of communities for explanation. Used if "explain_own_community" is set to true.
     Format:
