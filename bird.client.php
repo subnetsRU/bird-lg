@@ -1,7 +1,7 @@
 <?
 /*
 
-    BIRD Looking Glass :: Version: 0.4.1
+    BIRD Looking Glass :: Version: 0.4.2
     Home page: http://bird-lg.subnets.ru/
     =====================================
     Copyright (c) 2013-2014 SUBNETS.RU project (Moscow, Russia)
@@ -65,7 +65,7 @@ if ($run_as_remote==1){
     logg("bird.client run as remote");
     $stdin = fopen('php://stdin', 'r');
     $stdout = fopen('php://stdout', 'w');
-    $remote_ip=isset($_SERVER['TCPREMOTEIP']) ? $_SERVER['TCPREMOTEIP'] : "";
+    $remote_ip=isset($_SERVER['TCPREMOTEIP']) ? $_SERVER['TCPREMOTEIP'] : getenv('TCPREMOTEIP');
     $permited_ips=isset($config['bird_client_remote_permited_ips']) ? $config['bird_client_remote_permited_ips'] : array();
 
     if ($remote_ip){
